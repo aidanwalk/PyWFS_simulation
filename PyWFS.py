@@ -124,8 +124,8 @@ class WaveFrontSensor:
         sx = ( (I[0,1]+I[0,0]) - (I[1,1]+I[1,0]) ) / I0
         sy = ( (I[0,1]+I[1,1]) - (I[0,0]+I[1,0]) ) / I0
         
-        # sx *= self.telescope_diameter / self.N_elements
-        # sy *= self.telescope_diameter / self.N_elements
+        sx *= self.telescope_diameter / self.N_elements
+        sy *= self.telescope_diameter / self.N_elements
         return sx, sy
         
         
