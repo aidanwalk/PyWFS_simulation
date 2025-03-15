@@ -160,7 +160,10 @@ class interaction_matrix(np.ndarray):
         N = sx.shape[0]
         phases = phases.reshape((N,N))
         
-        return phases
+        # For some reason my phases are mirrored about the X and Y axes. 
+        # I am not sure why this happens... book keeping error in wavefront 
+        # slopes calculation? 
+        return phases[::-1, ::-1]
 
 
 
