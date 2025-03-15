@@ -161,7 +161,6 @@ class WaveFrontSensor:
     
     
     def measure_slopes(self, quadrants):
-<<<<<<< HEAD
         """
         Measures the wavefront slopes in <x> and <y> based on the input 
         pupil images (i.e. quadrants). 
@@ -184,13 +183,6 @@ class WaveFrontSensor:
         # Construct the quad-cell 
         # I = np.array([[quadrants[1], quadrants[2]], 
         #               [quadrants[0], quadrants[3]]])
-        I = np.array([[quadrants[3], quadrants[0]], 
-                      [quadrants[2], quadrants[1]]])
-=======
-        # # Construct the quad-cell 
-        # I = np.array([[quadrants[1], quadrants[2]], 
-        #               [quadrants[0], quadrants[3]]])
->>>>>>> modulate
         
         # # Compute the mean intensity per pixel
         # I0 = (I[0,0]+I[0,1]+I[1,0]+I[1,1])/4
