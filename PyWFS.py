@@ -112,17 +112,26 @@ class WaveFrontSensor:
         
     
     def measure_slopes(self, quadrants):
-        # Construct the quad-cell 
-        I = np.array([[quadrants[1], quadrants[2]], 
-                      [quadrants[0], quadrants[3]]])
+        # # Construct the quad-cell 
+        # I = np.array([[quadrants[1], quadrants[2]], 
+        #               [quadrants[0], quadrants[3]]])
         
+        # # Compute the mean intensity per pixel
+        # I0 = (I[0,0]+I[0,1]+I[1,0]+I[1,1])/4
+        
+        # # Compute the WFS slopes based on a quad-cell between the four pupil 
+        # # images
+        # sx = ( (I[0,1]+I[0,0]) - (I[1,1]+I[1,0]) ) / I0
+        # sy = ( (I[0,1]+I[1,1]) - (I[0,0]+I[1,0]) ) / I0
+        
+        a,c,d,b = quadrants
         # Compute the mean intensity per pixel
-        I0 = (I[0,0]+I[0,1]+I[1,0]+I[1,1])/4
+        I = (a+b+c+d)/4
         
         # Compute the WFS slopes based on a quad-cell between the four pupil 
         # images
-        sx = ( (I[0,1]+I[0,0]) - (I[1,1]+I[1,0]) ) / I0
-        sy = ( (I[0,1]+I[1,1]) - (I[0,0]+I[1,0]) ) / I0
+        sx = ((a+b)-(c+d)) / I
+        sy = ((a+c)-(b+d)) / I
         
         sx *= self.telescope_diameter / self.N_elements
         sy *= self.telescope_diameter / self.N_elements
