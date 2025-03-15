@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+
+A Wavefront Sensor class for a Pyramid Wavefront Sensor. 
+--------------------------------------------------------
+This is a wave optics simulator utilizing HCIPy and Fraunhofer diffraction
+theory. 
+
+
 Created on Mon Mar  3 14:32:26 2025
 
 @author: Aidan Walk
 """
+
 
 import numpy as np
 import hcipy as hp
 
 
 class WaveFrontSensor:
-    
     def __init__(self, pupil,
                  wavelength=800e-9, Npx_foc=500, focal_extent=5/206265,
                  telescope_diameter=2.2,
@@ -71,27 +78,68 @@ class WaveFrontSensor:
         
         
     def flat_wavefront(self):
-        # Returns a wavefront with no aberration, total power = 1
+        """
+        Creates a flat wavefront at the telescope aperture. The wavefront has 
+        total power = 1. 
+
+        Returns
+        -------
+        wavefront : hcipy.optics.wavefront.Wavefront
+            A flat HCIPy wavefront (constant phase).
+
+        """
         wavefront = hp.Wavefront(self.aperture.flatten(), self.wavelength)
         wavefront.total_power = 1
         return wavefront
     
     
     def pass_through(self, wavefront):
-        # Passes the wavefront through the wavefront sensor. Returns a list of
-        # arrays, where each list item is a pupil image. 
+        """
+        Passes a wavefront through the wavefront sensor. The input wavefront 
+        should be the wavefront incident at the telescope aperture (i.e. in 
+        pupil plane). 
+
+        Parameters
+        ----------
+        wavefront : hcipy.optics.wavefront.Wavefront
+            HCIPy wavefront object representing the wavefront at the entrance
+            of the telescope (i.e. in a pupil plane).
+
+        Returns
+        -------
+        pupil_images : list of ndarrays
+            Wavefront sensor pupil images ordered by quadrant.
+
+        """
+        
         # index 0 = quadrant 1, index 1 = quadrant 2, etc.. 
         # Pass the incoming wavefront through the PyWFS
         WFS_signal = self.pupil2pupils(wavefront)
         # Split the WFS signal into its four quadrants (one pupil image for 
         # each pyramid facet)
         pupil_images = self.split_quadrants(WFS_signal)
+        
         return pupil_images
     
     
+    
     def split_quadrants(self, wavefront):
-        # Split the WFS signal (four pupil images in a single array) into 
-        # Four individual array (one array per pupil image)
+        """
+        Splits the WFS signal (four pupil images in a single array) into 
+        Four individual arrays (one array per pupil image)
+
+        Parameters
+        ----------
+        wavefront : hcipy.optics.wavefront.Wavefront
+            HCIPy wavefront object representing the wavefront at the pupil
+            plane of the WFS.
+
+        Returns
+        -------
+        Qs : list of ndarrays
+            Wavefront sensor pupil images ordered by quadrant.
+
+        """
         WFS_signal = wavefront.intensity
         points = wavefront.grid.points
         X, Y = points.T
@@ -111,10 +159,32 @@ class WaveFrontSensor:
         return Qs
         
     
+    
     def measure_slopes(self, quadrants):
+        """
+        Measures the wavefront slopes in <x> and <y> based on the input 
+        pupil images (i.e. quadrants). 
+
+        Parameters
+        ----------
+        quadrants : list of ndarrays
+            A list of the WFS pupil images. The list must be of length 4 -- One 
+            list item per pupil image. The list should be ordered [quadrant_1, 
+            quadrant_2, quadrant_3, quadrant_4]
+
+        Returns
+        -------
+        sx : ndarray
+            Wavefront sensor slopes in <x>.
+        sy : ndarray
+            Wavefront sensor slopes in <y>.
+
+        """
         # Construct the quad-cell 
-        I = np.array([[quadrants[1], quadrants[2]], 
-                      [quadrants[0], quadrants[3]]])
+        # I = np.array([[quadrants[1], quadrants[2]], 
+        #               [quadrants[0], quadrants[3]]])
+        I = np.array([[quadrants[3], quadrants[0]], 
+                      [quadrants[2], quadrants[1]]])
         
         # Compute the mean intensity per pixel
         I0 = (I[0,0]+I[0,1]+I[1,0]+I[1,1])/4
@@ -124,8 +194,10 @@ class WaveFrontSensor:
         sx = ( (I[0,1]+I[0,0]) - (I[1,1]+I[1,0]) ) / I0
         sy = ( (I[0,1]+I[1,1]) - (I[0,0]+I[1,0]) ) / I0
         
+        
         sx *= self.telescope_diameter / self.N_elements
         sy *= self.telescope_diameter / self.N_elements
+        
         return sx, sy
         
         

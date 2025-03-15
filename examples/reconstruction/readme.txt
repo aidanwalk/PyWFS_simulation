@@ -1,6 +1,7 @@
 Contains an example of how to use the reconstruction.interaction_matrix class. 
-sx and sy are slopes generated using pyramidWFS.py, where the wavefront contains
-X-tilt aberrations. 
+
+sx and sy are slopes generated using PyWFS.py, where the wavefront contains
+spherical aberrations. 
 
 to run: 
 $ python reconstruction.py

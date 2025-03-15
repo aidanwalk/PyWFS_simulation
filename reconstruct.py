@@ -6,8 +6,9 @@ Wavefront reconstruction using Southwell Geometry.
 --------------------------------------------------
 The class interaction_matrix creates an interaction matrix object that allows
 us to conventiently convert wavefront slopes in to phases (See method 
-slope2phase). At the bottom of this file, contained in if __name__ == 
-'__main__':, contains a simple example of how to use the class. 
+slope2phase). 
+
+See ./examples/reconstruction/ for a simple example on how to use this class. 
 
 
 Created on Tue Feb  4 09:31:32 2025
@@ -49,8 +50,8 @@ class interaction_matrix(np.ndarray):
 
     def construct_A(self):
         # The final array should be (dim**2 x 2*dim**2) in size
-        A_x = self._make_sparse_x(-1,1)
-        A_y = self._make_sparse_y(-1,1)
+        A_x = self._make_sparse_x(-1, 1)
+        A_y = self._make_sparse_y(-1, 1)
         # A = np.append(A, np.array([np.ones(A.shape[-1])]), axis=0)
         
         return np.vstack((A_x, A_y))
@@ -160,41 +161,28 @@ class interaction_matrix(np.ndarray):
         N = sx.shape[0]
         phases = phases.reshape((N,N))
         
-        return phases
+        # For some reason my phases are mirrored about the X and Y axes. 
+        # I am not sure why this happens... book keeping error in wavefront 
+        # slopes calculation? 
+        return phases[::-1, ::-1]
 
 
-
-    
-    
-
-    
 
 if __name__ == "__main__":
     from astropy.io import fits
-    import matplotlib.pyplot as plt
-    import plotter
-    
-    # produce_simple(3)
-    
+    from plotter import plot_phase, plot_wavefront_phase
     # Open the slopes data
     sx = fits.getdata('sx.fits')
     sy = fits.getdata('sy.fits')
     
+    # Create the interaction matrix
     imat = interaction_matrix(sx.shape[0])
+    # Use it to solve for phases
     p = imat.slope2phase(sx, sy)
-    # p = np.fliplr(p)
-    plt.figure(figsize=(6,5))
-    plt.title('Reconstructed Wavefront')
-    im = plt.imshow(p, vmin=p.min(), vmax=p.max(), cmap='hsv', origin='lower')
-    plt.colorbar(im)
-    plt.tight_layout()
-    plt.savefig('./plots/reconstructed_wavefront.png', dpi=300)
-    plt.show()
     
-    # %%
+    # Make a plot of the recovered phase
     x = np.arange(p.shape[0])
     x, y = np.meshgrid(x, x)
-    plotter.plot_phase(x, y, p, fname='recovered_phase.html')
-    
-    
+    plot_phase(x, y, p, fname='./plots/recovered_phase.html')
+    plot_wavefront_phase(p)
     

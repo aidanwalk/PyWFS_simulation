@@ -6,7 +6,7 @@ Created on Thu Jan 16 09:09:46 2025
 @author: Aidan Walk
 """
 
-from pyramidWFS_hcipy import *
+from old.pyramidWFS_hcipy import *
 
 import matplotlib.pyplot as plt
 import plotly.graph_objs as go
@@ -132,7 +132,7 @@ def plot_light_progression(aperture,
     return 
 
 
-def plot_2D_slopes(sx, sy):
+def plot_2D_slopes(sx, sy, fname='./plots/recovered_WFS_slopes_2D.png'):
     plt.figure(tight_layout=True, figsize=(6,3))
     plt.suptitle("Recovered Wavefront Sensor Slopes")
     
@@ -151,7 +151,7 @@ def plot_2D_slopes(sx, sy):
     plt.colorbar(im, fraction=0.046, pad=0.04)
     plt.axis('off')
     
-    plt.savefig('./plots/recovered_WFS_slopes_2D.png', dpi=300)
+    plt.savefig(fname, dpi=300)
     plt.clf()
     return
 
@@ -191,7 +191,7 @@ def plot_3D_slopes(x, y, sx, sy, fname='recovered_slopes.html'):
     return
     
     
-def plot_phase(x, y, p, fname='recovered_phase.html'):
+def plot_phase(x, y, p, fname='./plots/recovered_phase.html'):
     # HTML 3D Slopes Plot
     fig = make_subplots(rows=1, cols=1, 
                         specs=[[{'type':'scene'}]], 
@@ -211,7 +211,7 @@ def plot_phase(x, y, p, fname='recovered_phase.html'):
     fig.add_trace(trace_x, row=1, col=1)
     fig.update_scenes(scene)
 
-    fig.write_html("./plots/"+fname)
+    fig.write_html(fname)
     plt.clf()
     
     

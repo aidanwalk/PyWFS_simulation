@@ -43,9 +43,16 @@ if __name__ == "__main__":
     incoming_wavefront = WFS.flat_wavefront()
     # Inject an aberration in to the incoming wavefront
     Z = Zernike.Zernike(pupil_array, rmax=N_pupil_px/2, wvln=WFS.wavelength)
-    aberration = Z.Tilt_X(WFE=WFE, wvln=WFS.wavelength)
-    incoming_wavefront.electric_field *= np.exp(1j * aberration.flatten())
+    # aberration = Z.Tilt_Y(WFE=WFE, wvln=WFS.wavelength)
+    # aberration = Z.Spherical(WFE=WFE, wvln=WFS.wavelength)
+    aberration = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -10, 36**2)
+    # incoming_wavefront.electric_field *= np.exp(1j * aberration.flatten())
     
+    p = incoming_wavefront.phase.shaped
+    plotter.plot_wavefront_phase(p * WFS.aperture)
+    x = np.arange(p.shape[0])
+    x, y = np.meshgrid(x, x)
+    plotter.plot_phase(x, y, p*WFS.aperture, fname='./plots/actual_phase.html')
     # Modulate the beam by injecting tip/tilt to steer the PSF around the 
     # pyramid
     
