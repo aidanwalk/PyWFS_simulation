@@ -16,8 +16,8 @@ from astropy.io import fits
 
 path2code = '/home/arcadia/mysoft/gradschool/useful/'
 sys.path.append(path2code)
-import code_fragments.Wavefront as wf
-from code_fragments import Zernike
+import code_fragments.Wavefront as wf # type: ignore
+from code_fragments import Zernike # type: ignore
 
 
 path2sim = '/home/arcadia/mysoft/gradschool/699_1/PyWFS_simulation/'
