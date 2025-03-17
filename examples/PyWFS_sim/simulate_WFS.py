@@ -9,6 +9,7 @@ Created on Fri Mar 14 14:21:37 2025
 @author: Aidan Walk
 """
 
+import os
 import sys
 import numpy as np
 from astropy.io import fits
