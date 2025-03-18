@@ -51,7 +51,9 @@ class interaction_matrix(np.ndarray):
     def construct_A(self):
         # The final array should be (dim**2 x 2*dim**2) in size
         A_x = self._make_sparse_x(-1, 1)
+        # A_x = np.flipud(A_x)
         A_y = self._make_sparse_y(-1, 1)
+        # A_y = np.flipud(A_y)
         # A = np.append(A, np.array([np.ones(A.shape[-1])]), axis=0)
         
         return np.vstack((A_x, A_y))
@@ -149,7 +151,7 @@ class interaction_matrix(np.ndarray):
         return A_y
     
 
-    def slope2phase(self, sx, sy, telescope_dia=2.2):
+    def slope2phase(self, sx, sy, telescope_dia=2.2, invert=True):
         # Construct the vector of slope values in the form:
         # [sx1, sx2, sx3, ..., sxf, sy1, sy2, sy3, ..., syf]
         s = np.hstack((sx.flatten(), sy.flatten()))
@@ -161,28 +163,18 @@ class interaction_matrix(np.ndarray):
         N = sx.shape[0]
         phases = phases.reshape((N,N))
         
-        # For some reason my phases are mirrored about the X and Y axes. 
+        # ISSUE: For some reason my phases are mirrored about the X and Y axes. 
         # I am not sure why this happens... book keeping error in wavefront 
         # slopes calculation? 
-        return phases[::-1, ::-1]
+        # SOLVED: The pyramid optic causes a flip in both the x and y axes. 
+        # This causes the recovered phase to be upside down and mirrored.
+        # (eg. if star light falls on the bottom right facet of the pyramid, 
+        # the light will be reflected to the top left quadrant of the detector)
+        # To fix this, we just flip the recovered phase.
+        if invert:
+            phases = phases[::-1, ::-1]
+
+        return phases
 
 
-
-if __name__ == "__main__":
-    from astropy.io import fits
-    from plotter import plot_phase, plot_wavefront_phase
-    # Open the slopes data
-    sx = fits.getdata('sx.fits')
-    sy = fits.getdata('sy.fits')
-    
-    # Create the interaction matrix
-    imat = interaction_matrix(sx.shape[0])
-    # Use it to solve for phases
-    p = imat.slope2phase(sx, sy)
-    
-    # Make a plot of the recovered phase
-    x = np.arange(p.shape[0])
-    x, y = np.meshgrid(x, x)
-    plot_phase(x, y, p, fname='./plots/recovered_phase.html')
-    plot_wavefront_phase(p)
     

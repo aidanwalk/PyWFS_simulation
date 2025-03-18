@@ -10,12 +10,10 @@ Created on Fri Mar 14 14:58:43 2025
 @author: Aidan Walk
 """
 
-
 import sys
 import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
-# import matplotlib.pyplot as plt
 
 
 
@@ -25,9 +23,10 @@ import code_fragments.Wavefront as wf
 from code_fragments import Zernike
 
 import sys
-sys.path.append('/home/arcadia/mysoft/gradschool/699_1/PyWFS_simulation/')
+sys.path.append('/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/')
 from reconstruct import interaction_matrix
 from PyWFS import WaveFrontSensor
+import plotter
 
 def plot_phases(fname='phase_comparison.html'):
     
@@ -102,3 +101,5 @@ if __name__ == "__main__":
     
     # Make a plot of the recovered phase
     plot_phases()
+    
+

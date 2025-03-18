@@ -41,13 +41,15 @@ class WaveFrontSensor:
         # Create the propagator for go from pupil to focal grid
         self.pupil2image = hp.FraunhoferPropagator(self.pupil_grid, 
                                                    self.focal_grid).forward
+        
         # And the propogator for the pyramid optic
-        self.pupil2pupils = hp.PyramidWavefrontSensorOptics(
+        self.pyramidOptic = hp.PyramidWavefrontSensorOptics(
             self.pwfs_grid, 
             separation=self.telescope_diameter, 
             wavelength_0=self.wavelength, 
             q=6
-            ).forward
+            )
+        self.pupil2pupils = self.pyramidOptic.forward
         
         
         
@@ -181,17 +183,6 @@ class WaveFrontSensor:
 
         """
         # Construct the quad-cell 
-        # I = np.array([[quadrants[1], quadrants[2]], 
-        #               [quadrants[0], quadrants[3]]])
-        
-        # # Compute the mean intensity per pixel
-        # I0 = (I[0,0]+I[0,1]+I[1,0]+I[1,1])/4
-        
-        # # Compute the WFS slopes based on a quad-cell between the four pupil 
-        # # images
-        # sx = ( (I[0,1]+I[0,0]) - (I[1,1]+I[1,0]) ) / I0
-        # sy = ( (I[0,1]+I[1,1]) - (I[0,0]+I[1,0]) ) / I0
-        
         a,c,d,b = quadrants
         # Compute the mean intensity per pixel
         I = (a+b+c+d)/4
@@ -208,4 +199,25 @@ class WaveFrontSensor:
         return sx, sy
         
         
-        
+    def light_progression(self, wavefront):
+        """
+        Generates images of the wavefront progression through the PyWFS.
+
+        Parameters
+        ----------
+        wavefront : hcipy.optics.wavefront.Wavefront
+            HCIPy wavefront object representing the wavefront at the entrance
+            of the telescope (i.e. in a pupil plane).
+
+        Returns
+        -------
+        images : list of ndarrays
+            List of images showing the wavefront progression through the WFS.
+
+        """
+        pupil_image = wavefront.phase.shaped
+        focal_image = self.pupil2image(wavefront).intensity.shaped
+        pyramid_image = self.pyramidOptic.pyramid.phase(self.wavelength).shaped
+        WFS_signal = self.pupil2pupils(wavefront).intensity.shaped
+
+        return pupil_image, focal_image, pyramid_image, WFS_signal

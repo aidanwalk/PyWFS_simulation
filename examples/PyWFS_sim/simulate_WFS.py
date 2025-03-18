@@ -21,7 +21,7 @@ import code_fragments.Wavefront as wf # type: ignore
 from code_fragments import Zernike # type: ignore
 
 
-path2sim = '/home/arcadia/mysoft/gradschool/699_1/PyWFS_simulation/'
+path2sim = '/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/'
 sys.path.append(path2sim)
 import plotter
 from PyWFS import WaveFrontSensor

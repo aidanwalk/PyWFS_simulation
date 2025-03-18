@@ -91,7 +91,8 @@ def plot_light_progression(aperture,
                            aberration, 
                            focal_plane, 
                            pyramid, 
-                           WFS_signal):
+                           WFS_signal, 
+                           fname='./plots/light_progression.png'):
     
     fig, ax = plt.subplots(nrows=1, ncols=4, 
                            tight_layout=True, 
@@ -126,7 +127,7 @@ def plot_light_progression(aperture,
     ax[3].axis('off')
     
     
-    plt.show()
+    plt.savefig(fname, dpi=300)
     
     
     return 
