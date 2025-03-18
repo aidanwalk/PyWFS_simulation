@@ -6,6 +6,8 @@ Created on Thu Mar 13 12:18:27 2025
 @author: Aidan Walk
 """
 
+import hcipy as hp
+
 import sys
 import numpy as np
 from astropy.io import fits
@@ -25,11 +27,7 @@ from code_fragments import Zernike
 if __name__ == "__main__":
     N_pupil_px = 2**8
     WFE = np.radians(0.01/3600)
-    modulation_radius = 1 # arcsecond
-    
-    
-    # Convert modulation radius to radians
-    modulation_radius /= 206265
+    modulation_radius = 1/206265 # radians
     
     
     
@@ -56,30 +54,34 @@ if __name__ == "__main__":
     # pyramid
     signal = WFS.modulate(incoming_wavefront, modulation_radius, num_steps=12)
     
-    # Recover the slopes
-    sx, sy = WFS.measure_slopes(signal)
-    
-    
-    x, y = WFS.signal_grid.points.T
-    x, y = x.reshape(sx.shape), y.reshape(sy.shape)
-    plotter.plot_3D_slopes(x, y, sx, sy, './plots/recovered_slopes.html')
-    plotter.plot_2D_slopes(sx, sy)
-    
-    # Save the wavefront slopes as fits files
-    hdu = fits.PrimaryHDU(sx)
-    hdu.writeto('sx.fits', overwrite=True)
-    hdu = fits.PrimaryHDU(sy)
-    hdu.writeto('sy.fits', overwrite=True)
-    
-    
-    
-    
-    
-    
-    
+
     #%%
-    '''
+    
+    # # Recover the slopes
+    # sx, sy = WFS.measure_slopes(signal)
+    
+    
+    # x, y = WFS.signal_grid.points.T
+    # x, y = x.reshape(sx.shape), y.reshape(sy.shape)
+    # plotter.plot_3D_slopes(x, y, sx, sy, './plots/recovered_slopes.html')
+    # plotter.plot_2D_slopes(sx, sy)
+    
+    # # Save the wavefront slopes as fits files
+    # hdu = fits.PrimaryHDU(sx)
+    # hdu.writeto('sx.fits', overwrite=True)
+    # hdu = fits.PrimaryHDU(sy)
+    # hdu.writeto('sy.fits', overwrite=True)
+    
+    
+    
+    
+    
+    
+    
+    
+    
     # %% In[Use our own PyWFS]
+    '''
     # =========================================================================
     # Now, lets make our own pyramid wavefront sensor optic, without using the
     # built in HCIpy one. 
