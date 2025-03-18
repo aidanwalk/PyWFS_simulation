@@ -114,18 +114,48 @@ class WaveFrontSensor:
 
         """
         
-        # index 0 = quadrant 1, index 1 = quadrant 2, etc.. 
         # Pass the incoming wavefront through the PyWFS
         WFS_signal = self.pupil2pupils(wavefront)
         # Split the WFS signal into its four quadrants (one pupil image for 
         # each pyramid facet)
-        pupil_images = self.split_quadrants(WFS_signal)
-        
+        pupil_images = self.split_quadrants(WFS_signal.intensity, 
+                                            WFS_signal.grid.points)
+
         return pupil_images
     
+
+
+    def modulate(self, wavefront, radius, num_steps):
+        # This is a modified version of ModulatedPyramidWavefrontSensorOptics
+        # in hcipy.wavefront_sensing.pyramid
+
+        # Create a tip-tilt mirror to steer the wavefront
+        tip_tilt_mirror = hp.optics.TipTiltMirror(wavefront.grid)
+
+        theta = np.linspace(0, 2 * np.pi, num_steps, endpoint=False)
+        x_modulation = radius / 2 * np.cos(theta)
+        y_modulation = radius / 2 * np.sin(theta)
+        
+
+        modulation_positions = hp.field.CartesianGrid(hp.field.UnstructuredCoords((x_modulation, y_modulation)))
+        
+        wf_modulated = []
+        for point in modulation_positions.points:
+            tip_tilt_mirror.actuators = point
+            modulated_wavefront = tip_tilt_mirror.forward(wavefront)
+            
+            wf_modulated.append(self.pyramidOptic.forward(modulated_wavefront))
+
+        signal = np.zeros(wf_modulated[0].intensity.shape)
+        for wf in wf_modulated:
+            signal += wf.intensity
+
+
+        return self.split_quadrants(signal, wf_modulated[0].grid.points)
     
-    
-    def split_quadrants(self, wavefront):
+
+
+    def split_quadrants(self, WFS_signal, points):
         """
         Splits the WFS signal (four pupil images in a single array) into 
         Four individual arrays (one array per pupil image)
@@ -142,8 +172,6 @@ class WaveFrontSensor:
             Wavefront sensor pupil images ordered by quadrant.
 
         """
-        WFS_signal = wavefront.intensity
-        points = wavefront.grid.points
         X, Y = points.T
         # Create a boolean mask for the points in each quadrant
         Q1_mask = (X>0) & (Y>0)
@@ -185,7 +213,7 @@ class WaveFrontSensor:
         # Construct the quad-cell 
         a,c,d,b = quadrants
         # Compute the mean intensity per pixel
-        I = (a+b+c+d)/4
+        I = a+b+c+d
         
         # Compute the WFS slopes based on a quad-cell between the four pupil 
         # images
