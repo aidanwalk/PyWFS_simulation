@@ -7,7 +7,7 @@ Created on Thu Feb 27 16:50:44 2025
 """
 
 import sys
-sys.path.append('/home/arcadia/mysoft/gradschool/699_1/PyWFS_simulation/')
+sys.path.append('/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/')
 from reconstruct import interaction_matrix
 
 

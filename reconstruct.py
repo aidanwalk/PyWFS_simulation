@@ -157,7 +157,7 @@ class interaction_matrix(np.ndarray):
         s = np.hstack((sx.flatten(), sy.flatten()))
         
         # solve for the phase values using the instance as a matrix
-        phases = self@s
+        phases = np.array(self@s)
         
         # reshape the phases vector
         N = sx.shape[0]

@@ -139,6 +139,8 @@ class WaveFrontSensor:
 
         modulation_positions = hp.field.CartesianGrid(hp.field.UnstructuredCoords((x_modulation, y_modulation)))
         
+        # Compute the wavefront after passing through the wavefront sensor 
+        # at each modulation position. 
         wf_modulated = []
         for point in modulation_positions.points:
             tip_tilt_mirror.actuators = point
@@ -146,6 +148,8 @@ class WaveFrontSensor:
             
             wf_modulated.append(self.pyramidOptic.forward(modulated_wavefront))
 
+        # Sum the modulated wavefront intensities to get the total modulated 
+        # signal
         signal = np.zeros(wf_modulated[0].intensity.shape)
         for wf in wf_modulated:
             signal += wf.intensity
@@ -211,15 +215,14 @@ class WaveFrontSensor:
 
         """
         # Construct the quad-cell 
-        a,c,d,b = quadrants
+        a,b,c,d = quadrants
         # Compute the mean intensity per pixel
         I = a+b+c+d
         
         # Compute the WFS slopes based on a quad-cell between the four pupil 
         # images
-        sx = ((a+b)-(c+d)) / I
-        sy = ((a+c)-(b+d)) / I
-        
+        sx = (a-b-c+d) / I
+        sy = (a+b-c-d) / I
         
         sx *= self.telescope_diameter / self.N_elements
         sy *= self.telescope_diameter / self.N_elements
