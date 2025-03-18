@@ -47,7 +47,7 @@ def plot_progression(focal_image, pupil_image):
 if __name__ == "__main__":
     N_pupil_px = 2**8
     WFE = np.radians(1/3600)
-    modulation_radius = np.radians(0.1/3600)
+    modulation_radius = np.radians(1/3600)
     modulation_steps = 12
     
     # Create the telescope aperture

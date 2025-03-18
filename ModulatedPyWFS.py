@@ -24,8 +24,31 @@ class ModulatedWavefrontSensor(WavefrontSensor):
 
     def modulate(self, wavefront, radius, num_steps, 
                  propagator=None):
-        # This is a modified version of ModulatedPyramidWavefrontSensorOptics
-        # in hcipy.wavefront_sensing.pyramid
+        """
+        Take a measurement of the wavefront using a modulated PyWFS. 
+
+        Parameters
+        ----------
+        wavefront : hcipy.optics.wavefront.Wavefront
+            HCIPy wavefront object representing the wavefront at the entrance
+            of the telescope (i.e. in a pupil plane).
+        radius : scalar
+            Modulation radius in radians. 
+        num_steps : int
+            Number of modulation steps (how many points on the circle to 
+            sample).
+        propagator : callable, optional
+            Propagator to use for the wavefront. If None, the default 
+            propagator is the pyramid optic (i.e. the wavefront goes into four 
+            pupil images). This can be used to propagate the wavefront to a 
+            focal plane, if desired, like in visualize_modulation().
+            The default is None.
+
+        Returns
+        -------
+        signal : np.ndarray
+            The intensity signal of the modulated PyWFS.
+        """
 
         # Create a tip-tilt mirror to steer the wavefront
         tip_tilt_mirror = hp.optics.TipTiltMirror(wavefront.grid)
