@@ -6,7 +6,7 @@ Created on Thu Jan 16 09:09:46 2025
 @author: Aidan Walk
 """
 
-from old.pyramidWFS_hcipy import *
+# from old.pyramidWFS_hcipy import *
 
 import matplotlib.pyplot as plt
 import plotly.graph_objs as go

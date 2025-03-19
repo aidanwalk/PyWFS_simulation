@@ -15,16 +15,16 @@ import numpy as np
 from astropy.io import fits
 # import matplotlib.pyplot as plt
 
-path2code = '/home/arcadia/mysoft/gradschool/useful/'
+path2code = '/home/arcadia/mysoft/gradschool/useful/code_fragments/'
 sys.path.append(path2code)
-import code_fragments.Wavefront as wf # type: ignore
-from code_fragments import Zernike # type: ignore
+import Wavefront as wf # type: ignore
+import Zernike # type: ignore
 
 
 path2sim = '/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/'
 sys.path.append(path2sim)
 import plotter
-from PyWFS import WaveFrontSensor
+from PyWFS import WavefrontSensor
 
 
 if __name__ == "__main__":
@@ -36,14 +36,14 @@ if __name__ == "__main__":
                                        N_pupil_px/2)
     
     # Init the wavefront sensor
-    WFS = WaveFrontSensor(pupil_array)
+    WFS = WavefrontSensor(pupil_array)
     
     
     # Create a wavefont incoming to the WFS
     incoming_wavefront = WFS.flat_wavefront()
     # Inject an aberration in to the incoming wavefront
     Z = Zernike.Zernike(pupil_array, rmax=N_pupil_px/2, wvln=WFS.wavelength)
-    aberration = Z.Tilt_X(WFE=WFE, wvln=WFS.wavelength)
+    aberration = Z.Spherical(WFE=WFE, wvln=WFS.wavelength)
     incoming_wavefront.electric_field *= np.exp(1j * aberration.flatten())
     
     

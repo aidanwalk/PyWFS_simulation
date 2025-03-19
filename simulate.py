@@ -14,7 +14,7 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 
 import plotter
-from PyWFS import WaveFrontSensor
+from PyWFS import WavefrontSensor
 
 
 path2code = '/home/arcadia/mysoft/gradschool/useful/'
@@ -26,24 +26,21 @@ from code_fragments import Zernike
 
 if __name__ == "__main__":
     N_pupil_px = 2**8
-    WFE = np.radians(0.01/3600)
-    modulation_radius = 1/206265 # radians
-    
-    
+    WFE = np.radians(1/3600)
     
     # Create the telescope aperture
     pupil_array = wf.circular_aperture((N_pupil_px,N_pupil_px),
                                        N_pupil_px/2)
     
     # Init the wavefront sensor
-    WFS = WaveFrontSensor(pupil_array)
+    WFS = WavefrontSensor(pupil_array)
     
     # Create a wavefont incoming to the WFS
     incoming_wavefront = WFS.flat_wavefront()
     # Inject an aberration in to the incoming wavefront
     Z = Zernike.Zernike(pupil_array, rmax=N_pupil_px/2, wvln=WFS.wavelength)
     # aberration = Z.Tilt_Y(WFE=WFE, wvln=WFS.wavelength)
-    aberration = Z.Tilt_X(WFE=-modulation_radius, wvln=WFS.wavelength)
+    aberration = Z.Tilt_X(WFE=WFE, wvln=WFS.wavelength)
     # aberration = Z.Spherical(WFE=WFE, wvln=WFS.wavelength)
     # aberration = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -10, 36**2)
     incoming_wavefront.electric_field *= np.exp(1j * aberration.flatten())
@@ -52,7 +49,8 @@ if __name__ == "__main__":
     # %%
     # Modulate the beam by injecting tip/tilt to steer the PSF around the 
     # pyramid
-    signal = WFS.modulate(incoming_wavefront, modulation_radius, num_steps=12)
+    signal = WFS.light_progression(incoming_wavefront)
+    plotter.plot_light_progression(aperture, *signal)
     
 
     #%%

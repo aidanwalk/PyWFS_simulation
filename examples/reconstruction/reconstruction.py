@@ -49,8 +49,8 @@ def plot_phase(x, y, p, fname='recovered_phase.html'):
 
 if __name__ == "__main__":
     # Open the slopes data
-    sx = fits.getdata('sx.fits')
-    sy = fits.getdata('sy.fits')
+    sx = fits.getdata('../PyWFS_sim/sx.fits')
+    sy = fits.getdata('../PyWFS_sim/sy.fits')
     
     # Create the interaction matrix
     imat = interaction_matrix(sx.shape[0])
