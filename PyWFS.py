@@ -17,6 +17,22 @@ class WavefrontSensor:
     ---------------------------------------------------------------------------
     This is a wave optics simulator utilizing HCIPy and Fraunhofer diffraction
     theory. 
+
+    Parameters
+    ----------
+    pupil : ndarray
+        A 2D array representing the telescope aperture. Values should be 
+        between 0-1, representing the transparency at a given point. 
+    wavelength : float, optional
+        The wavelength of light in meters. The default is 800e-9.
+    Npx_foc : int, optional
+        The number of pixels across the focal plane. The default is 500.
+    focal_extent : float, optional
+        The extent of the focal plane in radians. The default is 5/206265.
+    telescope_diameter : float, optional
+        The diameter of the telescope in meters. The default is 2.2.
+    N_elements : int, optional
+        The total number of actuator elements in the pupil. The default is 36.
     """
     def __init__(self, 
                  pupil,
