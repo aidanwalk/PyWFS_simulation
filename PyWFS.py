@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-
-A Wavefront Sensor class for a Pyramid Wavefront Sensor. 
--------------------------------------------------------------------------------
-This is a wave optics simulator utilizing HCIPy and Fraunhofer diffraction
-theory. 
-
-
 Created on Mon Mar  3 14:32:26 2025
 
 @author: Aidan Walk
@@ -19,19 +12,31 @@ import hcipy as hp
 
 
 class WavefrontSensor:
-    def __init__(self, pupil,
-                 wavelength=800e-9, Npx_foc=500, focal_extent=5/206265,
+    """
+    An unmodulated Pyramid Wavefront Sensor.
+    ---------------------------------------------------------------------------
+    This is a wave optics simulator utilizing HCIPy and Fraunhofer diffraction
+    theory. 
+    """
+    def __init__(self, 
+                 pupil,
+                 wavelength=800e-9, 
+                 Npx_foc=500, 
+                 focal_extent=5/206265,
                  telescope_diameter=2.2,
-                 N_elements=36):
+                 N_elements=36
+                 ):
         
-        self.pupil = pupil
+        # Assign attributes
+        self.pupil = pupil                          
         self.Npx_pupil = self.pupil.shape[0]
-        self.wavelength = wavelength
+        self.wavelength = wavelength                    # [meters]
         self.Npx_foc = Npx_foc
-        self.focal_extent = focal_extent
-        self.telescope_diameter = telescope_diameter
+        self.focal_extent = focal_extent                # [radians]
+        self.telescope_diameter = telescope_diameter    # [meters]
         self.N_elements = N_elements
         
+
         # Initialize the pupil, focal, and WFS grids
         self.__init_grids()
         
@@ -118,8 +123,8 @@ class WavefrontSensor:
 
         Returns
         -------
-        pupil_images : list of ndarrays
-            Wavefront sensor pupil images ordered by quadrant.
+        pupil_images : ndarray
+            Intensity image of the WFS signal (an image of four pupils)
 
         """
         # Pass the incoming wavefront through the PyWFS
