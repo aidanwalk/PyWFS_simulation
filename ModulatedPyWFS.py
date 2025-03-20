@@ -49,19 +49,39 @@ class ModulatedWavefrontSensor(WavefrontSensor):
         signal : np.ndarray
             The intensity signal of the modulated PyWFS.
         """
-
-        # Create a tip-tilt mirror to steer the wavefront
-        tip_tilt_mirror = hp.optics.TipTiltMirror(wavefront.grid)
-
-        theta = np.linspace(0, 2 * np.pi, num_steps, endpoint=False)
+        # Generate discrete points in a circle at which to steer the wavefront
+        theta = np.linspace(0, 2*np.pi, num_steps, endpoint=False)
         x_modulation = radius / 2 * np.cos(theta)
         y_modulation = radius / 2 * np.sin(theta)
         
         modulation_positions = np.vstack((x_modulation, y_modulation)).T
         
+        # Pass the wavefront through the WFS at these points.  
+        signal = self.discrete_modulation(wavefront, modulation_positions, propagator)
 
+        return signal
+    
+
+    def discrete_modulation(self, wavefront, modulation_positions, propagator=None):
+        """
+        Passes the wavefront through discrete positions in the focal plane, 
+        and integrates the light over each position. 
+
+        Parameters
+        ----------
+        wavefront : 
+
+        modulation_positions : 
+            Focal plane positions to place the wavefront. Positions are in 
+            units of radians. 
+
+
+        """
         if propagator is None:
             propagator = self.pupil2pupils
+
+        # Create a tip-tilt mirror to steer the wavefront
+        tip_tilt_mirror = hp.optics.TipTiltMirror(wavefront.grid)
 
         # Compute the wavefront after passing through the wavefront sensor 
         # at each modulation position. 
@@ -80,6 +100,7 @@ class ModulatedWavefrontSensor(WavefrontSensor):
             signal += wf.intensity.shaped
 
         return signal
+
 
 
 
