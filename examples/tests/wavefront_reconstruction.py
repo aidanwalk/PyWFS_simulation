@@ -19,13 +19,12 @@ import matplotlib.pyplot as plt
 path2code = '/home/arcadia/mysoft/gradschool/useful/code_fragments/'
 sys.path.append(path2code)
 import Wavefront as wf # type: ignore
-import Zernike # type: ignore
 
 import sys
 sys.path.append('/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/')
 from reconstruct import interaction_matrix
 from PyWFS import WavefrontSensor
-import plotter
+import aberrations
 
 
 
@@ -73,22 +72,23 @@ if __name__ == "__main__":
     
     
     # Inject an aberration in to the incoming wavefront
-    Z = Zernike.Zernike(pupil_array, rmax=N_pupil_px/2, wvln=WFS.wavelength)
+    Z = aberrations.Zernike(grid=WFS.input_pupil_grid,
+                            D=WFS.telescope_diameter)
     
     
-    zx = Z.Tilt_X(WFE=WFE, wvln=WFS.wavelength)
-    zy = Z.Tilt_Y(WFE=WFE, wvln=WFS.wavelength)
-    zs = Z.Spherical(WFE=WFE, wvln=WFS.wavelength)
+    zx = Z.from_name('tilt x', WFE=WFE, wavelength=WFS.wavelength)
+    zy = Z.from_name('tilt y', WFE=WFE, wavelength=WFS.wavelength)
+    zs = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
     # zs = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -10, WFS.N_elements**2)
     aberrs = [zx, zy, zs]
     
     # Create the interaction matrix
     imat = interaction_matrix(WFS.N_elements)
 
-    for i, ab in enumerate(aberrs):
+    for i, phase in enumerate(aberrs):
         # Create a wavefont incoming to the WFS
         incoming_wavefront = WFS.flat_wavefront()
-        incoming_wavefront.electric_field *= np.exp(1j * ab.flatten())
+        aberrations.aberrate(incoming_wavefront, phase)
         
         input_phase = incoming_wavefront.phase.shaped
         hdu = fits.PrimaryHDU(input_phase)
