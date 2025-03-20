@@ -18,10 +18,10 @@ plt.close('all')
 import sys
 sys.path.append('/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/')
 from ModulatedPyWFS import ModulatedWavefrontSensor
+import aberrations
 
 sys.path.append('/home/arcadia/mysoft/gradschool/useful/code_fragments/')
 import Wavefront as wf
-import Zernike
 
 
 
@@ -33,7 +33,7 @@ def response(WFEs, modulation_radius):
         WFE = np.radians(WFE/3600)
         # Create a wavefont incoming to the WFS
         incoming_wavefront = WFS.flat_wavefront()
-        aberration = Z.Tilt_X(WFE=WFE, wvln=WFS.wavelength)
+        aberration = Z.from_name('tilt x', WFE=WFE, wavelength=WFS.wavelength)
         incoming_wavefront.electric_field *= np.exp(1j * aberration.flatten())
         incoming_wavefront.total_power /= modulation_steps
 
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     
     
     # Inject an aberration in to the incoming wavefront
-    Z = Zernike.Zernike(pupil_array, rmax=N_pupil_px/2, wvln=WFS.wavelength)
+    Z = aberrations.Zernike(WFS.input_pupil_grid, WFS.telescope_diameter)
 
     curves = []
     for radius in modulation_radii:

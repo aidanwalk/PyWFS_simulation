@@ -57,7 +57,6 @@ def plot_phases(fname='phase_comparison.html'):
 if __name__ == "__main__":
     N_pupil_px = 2**8
     WFE = np.radians(0.01/3600)
-    modulation_radius = 1 # arcsecond
     
     
     # -------------------------------------------------------------------------
