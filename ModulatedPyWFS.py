@@ -51,8 +51,8 @@ class ModulatedWavefrontSensor(WavefrontSensor):
         """
         # Generate discrete points in a circle at which to steer the wavefront
         theta = np.linspace(0, 2*np.pi, num_steps, endpoint=False)
-        x_modulation = radius / 2 * np.cos(theta)
-        y_modulation = radius / 2 * np.sin(theta)
+        x_modulation = radius * np.cos(theta)
+        y_modulation = radius * np.sin(theta)
         
         modulation_positions = np.vstack((x_modulation, y_modulation)).T
         
@@ -69,12 +69,23 @@ class ModulatedWavefrontSensor(WavefrontSensor):
 
         Parameters
         ----------
-        wavefront : 
-
-        modulation_positions : 
+        wavefront : hcipy.optics.wavefront.Wavefront
+            HCIPy wavefront object representing the wavefront at the entrance
+            of the telescope (i.e. in a pupil plane).
+        modulation_positions : np.ndarray
             Focal plane positions to place the wavefront. Positions are in 
             units of radians. 
-
+        propagator : callable, optional
+            Propagator to use for the wavefront. If None, the default 
+            propagator is the pyramid optic (i.e. the wavefront goes into four 
+            pupil images). This can be used to propagate the wavefront to a 
+            focal plane, if desired, like in visualize_modulation().
+            The default is None.
+        
+        Returns
+        -------
+        signal : np.ndarray
+            The intensity signal of the modulated PyWFS.
 
         """
         if propagator is None:
@@ -87,7 +98,7 @@ class ModulatedWavefrontSensor(WavefrontSensor):
         # at each modulation position. 
         wf_modulated = []
         for point in modulation_positions:
-            tip_tilt_mirror.actuators = point
+            tip_tilt_mirror.actuators = point/2
             modulated_wavefront = tip_tilt_mirror.forward(wavefront)
             
             # wf_modulated.append(self.pyramidOptic.forward(modulated_wavefront))
@@ -108,4 +119,28 @@ class ModulatedWavefrontSensor(WavefrontSensor):
         pupil_signal = self.modulate(wavefront, radius, num_steps)
         focal_signal = self.modulate(wavefront, radius, num_steps, 
                                      propagator=self.pupil2image)
+        return focal_signal, pupil_signal
+    
+
+    def visualize_discrete_modulation(self, wavefront, modulation_positions):
+        """
+        Visualize the modulation of the wavefront sensor. 
+
+        Parameters
+        ----------
+        wavefront : hcipy.optics.wavefront.Wavefront
+            HCIPy wavefront object representing the wavefront at the entrance
+            of the telescope (i.e. in a pupil plane).
+        modulation_positions : np.ndarray
+            Focal plane positions to place the wavefront. Positions are in 
+            units of radians. 
+
+        Returns
+        -------
+        signal : np.ndarray
+            The intensity signal of the modulated PyWFS.
+        """
+        pupil_signal = self.discrete_modulation(wavefront, modulation_positions)
+        focal_signal = self.discrete_modulation(wavefront, modulation_positions, 
+                                                propagator=self.pupil2image)
         return focal_signal, pupil_signal

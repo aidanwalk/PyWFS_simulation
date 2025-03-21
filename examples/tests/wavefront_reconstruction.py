@@ -36,9 +36,7 @@ def plot_phases(fname='phase_comparison.html'):
         input_phase = fits.getdata(f'./aberrations/input_{i}.fits')*WFS.aperture
         recovered_phase = fits.getdata(f'./aberrations/recovered_{i}.fits')
         # Create a plot for the x-slope
-        pltkwargs = {'vmin':input_phase.min(), 
-                     'vmax':input_phase.max(),
-                     'origin':'lower',
+        pltkwargs = {'origin':'lower',
                      'cmap':'bone',
                      }
         im = axs[0,i].imshow(input_phase, **pltkwargs)
@@ -56,7 +54,7 @@ def plot_phases(fname='phase_comparison.html'):
 
 if __name__ == "__main__":
     N_pupil_px = 2**8
-    WFE = np.radians(0.01/3600)
+    WFE = np.radians(0.05/3600)
     
     
     # -------------------------------------------------------------------------
