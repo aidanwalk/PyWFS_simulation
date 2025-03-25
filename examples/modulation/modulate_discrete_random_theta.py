@@ -58,7 +58,7 @@ def response(WFEs, modulation_points):
 
 
 def visualize_modulation(radius):
-    global modulation_thetas
+    global modulation_thetas, file_suffix
     # Create a wavefont incoming to the WFS
     incoming_wavefront = WFS.flat_wavefront()
     # phase = Z.from_name('tilt x', WFE=1/206265, wavelength=WFS.wavelength)
@@ -73,15 +73,14 @@ def visualize_modulation(radius):
     focal_image = hp.Field(focal_image.ravel(), WFS.focal_grid)
     plot_helper.plot_progression(focal_image, pupil_image, 
                                  title='Random Azimuth Sampling - $r_{mod}$='+f'{radius*206265:0.2f} as',
-                                 fname='light_progression_random_azimuth.png')
+                                 fname=f'light_progression_{file_suffix}.png')
 
 
 
 
 def verify_reconstruction(modulation_radius, WFE=0.02/206265):
-    global Z
-    global modulation_thetas
-    file_prefix = 'modulated_random_azimuth'
+    global Z, modulation_thetas, file_suffix
+    
     zx = Z.from_name('tilt x', WFE=WFE, wavelength=WFS.wavelength)
     zy = Z.from_name('tilt y', WFE=WFE, wavelength=WFS.wavelength)
     zs = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
@@ -104,7 +103,7 @@ def verify_reconstruction(modulation_radius, WFE=0.02/206265):
         
         input_phase = incoming_wavefront.phase.shaped
         hdu = fits.PrimaryHDU(input_phase)
-        hdu.writeto(f'./aberrations/input_{file_prefix}_{i}.fits', overwrite=True)
+        hdu.writeto(f'./aberrations/input_{file_suffix}_{i}.fits', overwrite=True)
     
         # Pass the wavefront through the WFS
         signal = WFS.discrete_modulation(incoming_wavefront,
@@ -115,12 +114,12 @@ def verify_reconstruction(modulation_radius, WFE=0.02/206265):
         # Use it to solve for phases
         recovered_phase = imat.slope2phase(sx, sy)
         hdu = fits.PrimaryHDU(recovered_phase)
-        hdu.writeto(f'./aberrations/recovered_{file_prefix}_{i}.fits', overwrite=True)
+        hdu.writeto(f'./aberrations/recovered_{file_suffix}_{i}.fits', overwrite=True)
     
     
     # Make a plot of the recovered phase
-    plot_helper.plot_phases(len(aberrs), prefix=file_prefix, 
-                            fname='reconstruction_random_azimuth.png', 
+    plot_helper.plot_phases(len(aberrs), prefix=file_suffix, 
+                            fname=f'reconstruction_{file_suffix}.png', 
                             title='Random Azimuth Reconstruction, $r_{mod}$='+f'{modulation_radius*206265:0.2f} as')
     return
 
@@ -132,6 +131,8 @@ if __name__ == "__main__":
     input_slopes = np.linspace(0, 0.2, 21)
     modulation_radii = np.linspace(0, 0.2, 11)
     modulation_steps = 12
+    # Suffix to be appended to the output files
+    file_suffix = f'random_azimuth_N{modulation_steps}'
 
     # Randomly generate azimuthal modulation positions
     modulation_thetas = np.random.uniform(0, 2*np.pi, modulation_steps)

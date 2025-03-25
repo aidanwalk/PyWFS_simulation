@@ -1,0 +1,4 @@
+*.fits
+*.png
+*.html
+__pycache__
