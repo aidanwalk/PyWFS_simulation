@@ -52,7 +52,7 @@ def plot_response(input_slopes, curves, modulation_radii,
     plt.figure(figsize=(8,6), tight_layout=True)
     plt.clf()
 
-    colors = cm.inferno(np.linspace(0, 1, len(curves)+1))
+    colors = cm.inferno(np.linspace(0, 1, len(curves)+1)) # type : ignore
     for i, curve in enumerate(curves):
         plt.plot(input_slopes, curve, color=colors[i],
                  label='$r_{mod}$='+f'{modulation_radii[i]:0.2f} as')
@@ -61,33 +61,33 @@ def plot_response(input_slopes, curves, modulation_radii,
     # plt.axis('equal')
     plt.title(title)
     plt.xlabel('input slopes [arcsec]')
-    plt.ylabel('output slopes [arcsec]')
-    plt.ylim(-0.06, 0.01)
+    plt.ylabel('output slopes [?]')
+    # plt.ylim(-0.06, 0.01)
     plt.savefig(fname, dpi=300)
     return
 
 
 
 def plot_phases(N_files, prefix='', fname='phase_comparison.html', title="input vs recovered phase"):
-        fig, axs = plt.subplots(2, 3, figsize=(10, 5))
-        plt.suptitle(title)
-        for i in range(N_files):
-            input_phase = fits.getdata(f'./aberrations/input_{prefix}_{i}.fits')
-            recovered_phase = fits.getdata(f'./aberrations/recovered_{prefix}_{i}.fits')
-            # Create a plot for the x-slope
-            pltkwargs = {'origin':'lower',
-                        'cmap':'bone',
-                        }
-            im = axs[0,i].imshow(input_phase, **pltkwargs)
-            plt.colorbar(im,fraction=0.046, pad=0.04)
-            axs[0,i].axis('off')
-            im = axs[1,i].imshow(recovered_phase, vmin=-recovered_phase.max(), 
-                                vmax=recovered_phase.max(), 
-                                **pltkwargs
-                                )
-            plt.colorbar(im,fraction=0.046, pad=0.04)
-            axs[1,i].axis('off')
-        plt.tight_layout()
-        plt.savefig(fname, dpi=300)
-        
-        return
+    fig, axs = plt.subplots(2, 3, figsize=(10, 5))
+    plt.suptitle(title)
+    for i in range(N_files):
+        input_phase = fits.getdata(f'./aberrations/input_{prefix}_{i}.fits')
+        recovered_phase = fits.getdata(f'./aberrations/recovered_{prefix}_{i}.fits')
+        # Create a plot for the x-slope
+        pltkwargs = {'origin':'lower',
+                    'cmap':'bone',
+                    }
+        im = axs[0,i].imshow(input_phase, **pltkwargs)
+        plt.colorbar(im,fraction=0.046, pad=0.04)
+        axs[0,i].axis('off')
+        im = axs[1,i].imshow(recovered_phase, vmin=-recovered_phase.max(), 
+                            vmax=recovered_phase.max(), 
+                            **pltkwargs
+                            )
+        plt.colorbar(im,fraction=0.046, pad=0.04)
+        axs[1,i].axis('off')
+    plt.tight_layout()
+    plt.savefig(fname, dpi=300)
+    
+    return

@@ -36,7 +36,8 @@ def response(WFEs, modulation_radius):
         WFE = np.radians(WFE/3600)
         # Create a wavefont incoming to the WFS
         incoming_wavefront = WFS.flat_wavefront()
-        aberration = Z.from_name('tilt x', WFE=WFE, wavelength=WFS.wavelength)
+        aberration = Z.from_name('tilt x', WFE=WFE*WFS.telescope_diameter/2,
+                                 wavelength=WFS.wavelength)
         incoming_wavefront.electric_field *= np.exp(1j * aberration.flatten())
         incoming_wavefront.total_power /= modulation_steps
 
@@ -76,30 +77,33 @@ def visualize_modulation(radius):
 
 
 def verify_reconstruction(modulation_radius, WFE=0.02/206265):
-    global Z
+    global Z, modulation_steps
     file_prefix= 'modulated_uniform_azimuth'
-    zx = Z.from_name('tilt x', WFE=WFE, wavelength=WFS.wavelength)
-    zy = Z.from_name('tilt y', WFE=WFE, wavelength=WFS.wavelength)
-    zs = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
+    
+    z1 = Z.from_name('tilt x', WFE=WFE*WFS.telescope_diameter/2,
+                     wavelength=WFS.wavelength)
+    z2 = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
+    z3 = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -9, WFS.N_elements**2).ravel()
+    z3 = hp.Field(z3, WFS.input_pupil_grid)
     # zs = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -10, WFS.N_elements**2)
-    aberrs = [zx, zy, zs]
+    aberrs = [z1, z2, z3]
     
     # Create the interaction matrix
     imat = interaction_matrix(WFS.N_elements)
-
+    
     for i, phase in enumerate(aberrs):
         # Create a wavefont incoming to the WFS
         incoming_wavefront = WFS.flat_wavefront()
         aberrations.aberrate(incoming_wavefront, phase)
         
-        input_phase = incoming_wavefront.phase.shaped
-        hdu = fits.PrimaryHDU(input_phase)
+        # input_phase = incoming_wavefront.phase.shaped
+        hdu = fits.PrimaryHDU(phase.shaped)
         hdu.writeto(f'./aberrations/input_{file_prefix}_{i}.fits', overwrite=True)
     
         # Pass the wavefront through the WFS
         signal = WFS.modulate(incoming_wavefront, 
                               radius=modulation_radius, 
-                              num_steps=12
+                              num_steps=modulation_steps
                               )
         
         # Recover the slopes
@@ -123,7 +127,7 @@ def verify_reconstruction(modulation_radius, WFE=0.02/206265):
 
 if __name__ == "__main__":
     N_pupil_px = 2**8
-    input_slopes = np.linspace(0, 0.2, 21)
+    input_slopes = np.linspace(0, 0.2, 21) 
     modulation_radii = np.linspace(0, 0.2, 11)
     modulation_steps = 12
     
@@ -138,7 +142,7 @@ if __name__ == "__main__":
     # Inject an aberration in to the incoming wavefront
     Z = aberrations.Zernike(WFS.input_pupil_grid, WFS.telescope_diameter)
 
-
+    # %%
     # -------------------------------------------------------------------------
     # Generate a response curve for each modulation radius
     # -------------------------------------------------------------------------
@@ -149,12 +153,12 @@ if __name__ == "__main__":
         curves.append(output_slopes)
     # %%
     
-    plot_helper.plot_response(input_slopes, curves, modulation_radii,
+    plot_helper.plot_response(input_slopes, np.abs(curves), modulation_radii,
                               title='PyWFS Gain - Uniform Azimuth Sampling',
                               fname='response_uniform_azimuth.png')
 
 
-
+    # %%
     # -------------------------------------------------------------------------
     # Visualize the modulation
     # -------------------------------------------------------------------------

@@ -12,6 +12,7 @@ Created on Fri Mar 14 14:58:43 2025
 
 import sys
 import numpy as np
+import hcipy as hp
 from astropy.io import fits
 import matplotlib.pyplot as plt
 
@@ -31,7 +32,7 @@ import aberrations
 def plot_phases(fname='phase_comparison.html'):
     
     fig, axs = plt.subplots(2, 3, figsize=(10, 5))
-    plt.suptitle('Input vs Recovered Phase')
+    plt.suptitle('Modulated PyWFS, Input vs Recovered Phase')
     for i in range(len(aberrs)):
         input_phase = fits.getdata(f'./aberrations/input_modulated_{i}.fits')*WFS.aperture
         recovered_phase = fits.getdata(f'./aberrations/recovered_modulated_{i}.fits')
@@ -77,11 +78,12 @@ if __name__ == "__main__":
                             D=WFS.telescope_diameter)
     
     
-    zx = Z.from_name('tilt x', WFE=WFE, wavelength=WFS.wavelength)
-    zy = Z.from_name('tilt y', WFE=WFE, wavelength=WFS.wavelength)
-    zs = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
-    # zs = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -10, WFS.N_elements**2)
-    aberrs = [zx, zy, zs]
+    z1 = Z.from_name('tilt x', WFE=WFE, wavelength=WFS.wavelength)
+    # zy = Z.from_name('tilt y', WFE=WFE, wavelength=WFS.wavelength)
+    z2 = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
+    z3 = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -10, WFS.N_elements**2).ravel()
+    z3 = hp.Field(z3, WFS.input_pupil_grid)
+    aberrs = [z1, z2, z3]
     
     # Create the interaction matrix
     imat = interaction_matrix(WFS.N_elements)
@@ -91,8 +93,8 @@ if __name__ == "__main__":
         incoming_wavefront = WFS.flat_wavefront()
         aberrations.aberrate(incoming_wavefront, phase)
         
-        input_phase = incoming_wavefront.phase.shaped
-        hdu = fits.PrimaryHDU(input_phase)
+        # input_phase = incoming_wavefront.phase.shaped
+        hdu = fits.PrimaryHDU(phase.shaped)
         hdu.writeto(f'./aberrations/input_modulated_{i}.fits', overwrite=True)
     
         # Pass the wavefront through the WFS

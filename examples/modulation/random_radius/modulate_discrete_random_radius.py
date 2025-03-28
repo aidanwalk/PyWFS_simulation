@@ -21,7 +21,7 @@ import hcipy as hp
 from astropy.io import fits
 
 import plot_helper
-
+import matplotlib.pyplot as plt
 import sys
 sys.path.append('/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/')
 from reconstruct import interaction_matrix
@@ -41,7 +41,8 @@ def response(WFEs, modulation_points):
         WFE = np.radians(WFE/3600)
         # Create a wavefont incoming to the WFS
         incoming_wavefront = WFS.flat_wavefront()
-        aberration = Z.from_name('tilt x', WFE=WFE, wavelength=WFS.wavelength)
+        aberration = Z.from_name('tilt x', WFE=WFE*WFS.telescope_diameter,
+                                 wavelength=WFS.wavelength)
         incoming_wavefront.electric_field *= np.exp(1j * aberration.flatten())
         incoming_wavefront.total_power /= modulation_steps
 
@@ -57,43 +58,45 @@ def response(WFEs, modulation_points):
     return out_slope
 
 
-def visualize_modulation(radius):
-    global modulation_thetas, file_suffix
+def visualize_modulation():
+    global modulation_points, file_suffix
     # Create a wavefont incoming to the WFS
     incoming_wavefront = WFS.flat_wavefront()
     # phase = Z.from_name('tilt x', WFE=1/206265, wavelength=WFS.wavelength)
     # incoming_wavefront = aberrations.aberrate(incoming_wavefront, phase)
 
-    x = radius * np.cos(modulation_thetas)
-    y = radius * np.sin(modulation_thetas)
-    modulation_points = np.vstack((x, y)).T
+    # x = modulation_radii * np.cos(modulation_thetas)
+    # y = modulation_radii * np.sin(modulation_thetas)
+    # modulation_points = np.vstack((x, y)).T
     
     focal_image, pupil_image = WFS.visualize_discrete_modulation(
         incoming_wavefront, modulation_positions=modulation_points)
     focal_image = hp.Field(focal_image.ravel(), WFS.focal_grid)
     plot_helper.plot_progression(focal_image, pupil_image, 
-                                 title='Random Azimuth Sampling - $r_{mod}$='+f'{radius*206265:0.2f} as',
+                                 title=f'Random Radius Sampling, {modulation_steps} stars',
                                  fname=f'light_progression_{file_suffix}.png')
 
 
 
 
-def verify_reconstruction(modulation_radius, WFE=0.02/206265):
-    global Z, modulation_thetas, file_suffix
+def verify_reconstruction(WFE=0.02/206265):
+    global Z, file_suffix, modulation_points
     
-    zx = Z.from_name('tilt x', WFE=WFE, wavelength=WFS.wavelength)
-    zy = Z.from_name('tilt y', WFE=WFE, wavelength=WFS.wavelength)
-    zs = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
+    z1 = Z.from_name('tilt x', WFE=WFE*WFS.telescope_diameter, 
+                     wavelength=WFS.wavelength)
+    z2 = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
+    z3 = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -9, WFS.N_elements**2).ravel()
+    z3 = hp.Field(z3, WFS.input_pupil_grid)
     # zs = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -10, WFS.N_elements**2)
-    aberrs = [zx, zy, zs]
+    aberrs = [z1, z2, z3]
     
     # Create the interaction matrix
     imat = interaction_matrix(WFS.N_elements)
 
     # Convert modulation positions to x,y coordinates
-    x = radius * np.cos(modulation_thetas)
-    y = radius * np.sin(modulation_thetas)
-    modulation_points = np.vstack((x, y)).T
+    # x = modulation_radii * np.cos(modulation_thetas)
+    # y = modulation_radii * np.sin(modulation_thetas)
+    # modulation_points = np.vstack((x, y)).T
 
 
     for i, phase in enumerate(aberrs):
@@ -101,8 +104,8 @@ def verify_reconstruction(modulation_radius, WFE=0.02/206265):
         incoming_wavefront = WFS.flat_wavefront()
         aberrations.aberrate(incoming_wavefront, phase)
         
-        input_phase = incoming_wavefront.phase.shaped
-        hdu = fits.PrimaryHDU(input_phase)
+        # input_phase = incoming_wavefront.phase.shaped
+        hdu = fits.PrimaryHDU(phase.shaped)
         hdu.writeto(f'./aberrations/input_{file_suffix}_{i}.fits', overwrite=True)
     
         # Pass the wavefront through the WFS
@@ -120,22 +123,24 @@ def verify_reconstruction(modulation_radius, WFE=0.02/206265):
     # Make a plot of the recovered phase
     plot_helper.plot_phases(len(aberrs), prefix=file_suffix, 
                             fname=f'reconstruction_{file_suffix}.png', 
-                            title='Random Azimuth Reconstruction, $r_{mod}$='+f'{modulation_radius*206265:0.2f} as')
+                            title=f'Random Radius Reconstruction, {modulation_steps} stars')
     return
 
 
 # %% 
 
 if __name__ == "__main__":
+    WFS_focal_extent = 5/206265
     N_pupil_px = 2**8
     input_slopes = np.linspace(0, 0.2, 21)
-    modulation_radii = np.linspace(0, 0.2, 11)
-    modulation_steps = 12
+    modulation_steps = 2**8
     # Suffix to be appended to the output files
-    file_suffix = f'random_azimuth_N{modulation_steps}'
+    file_suffix = f'random_radius_N{modulation_steps}'
 
     # Randomly generate azimuthal modulation positions
-    modulation_thetas = np.random.uniform(0, 2*np.pi, modulation_steps)
+    # modulation_thetas = np.random.uniform(0, 2*np.pi, modulation_steps)
+    # Randomly generate modulation radii
+    # modulation_radii = np.random.uniform(-WFS_focal_extent/2, WFS_focal_extent/2, modulation_steps)
     
     
     
@@ -144,7 +149,9 @@ if __name__ == "__main__":
                                        N_pupil_px/2)
     
     # Init the wavefront sensor
-    WFS = ModulatedWavefrontSensor(pupil_array)
+    WFS = ModulatedWavefrontSensor(pupil_array, 
+                                   focal_extent=WFS_focal_extent,
+                                   telescope_diameter=2.2,)
     
     # -------------------------------------------------------------------------
     # Generate a response curve for each modulation radius
@@ -153,35 +160,40 @@ if __name__ == "__main__":
     # Inject an aberration in to the incoming wavefront
     Z = aberrations.Zernike(WFS.input_pupil_grid, WFS.telescope_diameter)
 
-    curves = []
-    for radius in modulation_radii:
-        r = np.radians(radius/3600)
-        # Convert modulation positions to x,y coordinates
-        x = r * np.cos(modulation_thetas)
-        y = r * np.sin(modulation_thetas)
-        modulation_points = np.vstack((x, y)).T
-
-        print(f'Modulation radius: {radius:0.3f} arcsec')
-        output_slopes = response(input_slopes, modulation_points) 
-        curves.append(output_slopes)
+    
+    
+    # Convert modulation positions to x,y coordinates
+    # x = modulation_radii * np.cos(modulation_thetas)
+    # y = modulation_radii * np.sin(modulation_thetas)
+    # x = np.random.uniform(-WFS_focal_extent/2, WFS_focal_extent/2, modulation_steps)
+    # y = np.random.uniform(-WFS_focal_extent/2, WFS_focal_extent/2, modulation_steps)
+    # modulation_points = np.vstack((x, y)).T
+    modulation_points = np.random.uniform(-0.4, 
+                                          0.4, 
+                                          (modulation_steps,2))/206265
+    # plt.close('all')
+    # plt.scatter(*modulation_points.T)
+    # plt.show()
+    
+    output_slopes = response(input_slopes, modulation_points) 
 
 
     # %%
-    plot_helper.plot_response(input_slopes, curves, modulation_radii,
-                              title='PyWFS Gain - Random Azimuth Sampling',
-                              fname='response_random_azimuth.png')
+    plot_helper.plot_response(input_slopes, -np.array([output_slopes]), [0],
+                              title='PyWFS Gain - Random Radius Sampling',
+                              fname=f'response_{file_suffix}.png')
 
 
 
     # -------------------------------------------------------------------------
     # Visualize the modulation
     # -------------------------------------------------------------------------
-    visualize_modulation(radius=0.4/206265)
+    visualize_modulation()
 
 
     # -------------------------------------------------------------------------
     # Verify wavefront reconstruction
     # -------------------------------------------------------------------------
     # %%
-    verify_reconstruction(modulation_radius=0.4/206265)
+    verify_reconstruction(WFE=0.02/206265)
 
