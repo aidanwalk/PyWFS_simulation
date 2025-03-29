@@ -18,7 +18,7 @@ class ModulatedWavefrontSensor(WavefrontSensor):
     This is an extension of the PyWFS class to include modulation of the 
     incoming beam. 
     """
-    def __init__(self, pupil, **kwargs):
+    def __init__(self, pupil=None, **kwargs):
         super().__init__(pupil, **kwargs)
 
 

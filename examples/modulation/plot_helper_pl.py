@@ -8,10 +8,10 @@ Created on Thu Mar 20 20:04 2025
 
 
 
-
+import re
 import numpy as np
 import hcipy as hp
-from astropy.io import fits
+from astropy.table import Table
 import matplotlib.pyplot as plt
 from matplotlib import cm
 plt.close('all')
@@ -46,16 +46,21 @@ def plot_progression(focal_image, pupil_image,
 
 
 
-def plot_response(input_slopes, curves, modulation_radii, 
+def plot_response(data_file,
                   title='PyWFS Gain',
                   fname='response.png'):
     plt.figure(figsize=(8,6), tight_layout=True)
     plt.clf()
 
-    colors = cm.inferno(np.linspace(0, 1, len(curves)+1))
-    for i, curve in enumerate(curves):
-        plt.plot(input_slopes[i], curve, color=colors[i],
-                 label='$r_{mod}$='+f'{modulation_radii[i]:0.2f} as')
+    
+    tab = Table.read(data_file, format='ascii.fixed_width')
+    
+    
+    colors = cm.inferno(np.linspace(0, 1, len(tab.columns[:])))
+    for i, curve in enumerate(tab.columns[1:].keys()):
+        radius = float(re.sub('[^0-9,.]','', curve))
+        plt.plot(tab['input_WFE'], tab[curve], color=colors[i],
+                 label='$r_{mod}$='+f'{radius:0.2f} as')
     
     plt.legend()
     # plt.axis('equal')
@@ -68,26 +73,26 @@ def plot_response(input_slopes, curves, modulation_radii,
 
 
 
-def plot_phases(N_files, prefix='', fname='phase_comparison.html', title="input vs recovered phase"):
-        fig, axs = plt.subplots(2, 3, figsize=(10, 5))
-        plt.suptitle(title)
-        for i in range(N_files):
-            input_phase = fits.getdata(f'./aberrations/input_{prefix}_{i}.fits')
-            recovered_phase = fits.getdata(f'./aberrations/recovered_{prefix}_{i}.fits')
-            # Create a plot for the x-slope
-            pltkwargs = {'origin':'lower',
-                        'cmap':'bone',
-                        }
-            im = axs[0,i].imshow(input_phase, **pltkwargs)
-            plt.colorbar(im,fraction=0.046, pad=0.04)
-            axs[0,i].axis('off')
-            im = axs[1,i].imshow(recovered_phase, vmin=-recovered_phase.max(), 
-                                vmax=recovered_phase.max(), 
-                                **pltkwargs
-                                )
-            plt.colorbar(im,fraction=0.046, pad=0.04)
-            axs[1,i].axis('off')
-        plt.tight_layout()
-        plt.savefig(fname, dpi=300)
-        
-        return
+def plot_phases(input_phases, output_phases, fname='phase_comparison.html', title="input vs recovered phase"):
+    fig, axs = plt.subplots(2, 3, figsize=(10, 5))
+    plt.suptitle(title)
+    for i in range(len(input_phases)):
+        input_phase = input_phases[i]
+        recovered_phase = output_phases[i]
+        # Create a plot for the x-slope
+        pltkwargs = {'origin':'lower',
+                    'cmap':'bone',
+                    }
+        im = axs[0,i].imshow(input_phase, **pltkwargs)
+        plt.colorbar(im,fraction=0.046, pad=0.04)
+        axs[0,i].axis('off')
+        im = axs[1,i].imshow(recovered_phase, vmin=-recovered_phase.max(), 
+                            vmax=recovered_phase.max(), 
+                            **pltkwargs
+                            )
+        plt.colorbar(im,fraction=0.046, pad=0.04)
+        axs[1,i].axis('off')
+    plt.tight_layout()
+    plt.savefig(fname, dpi=300)
+    
+    return

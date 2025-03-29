@@ -35,7 +35,7 @@ class WavefrontSensor:
         The total number of actuator elements in the pupil. The default is 36.
     """
     def __init__(self, 
-                 pupil,
+                 pupil=None,
                  wavelength=800e-9, 
                  Npx_foc=500, 
                  focal_extent=5/206265,
@@ -43,6 +43,9 @@ class WavefrontSensor:
                  N_elements=36
                  ):
         
+        if pupil is None:
+            pupil=self.circular_aperture((2**8, 2**8), 2**7)
+            
         # Assign attributes
         self.pupil = pupil                          
         self.Npx_pupil = self.pupil.shape[0]
@@ -106,7 +109,31 @@ class WavefrontSensor:
             )
         return 
 
-      
+    
+    @ staticmethod
+    def circular_aperture(shape, r):
+        """
+        Creates a cicrular telescope aperture of a given shape and radius.
+
+        Parameters
+        ----------
+        shape : tuple
+            Number of pixels in the x and y directions (height, width).
+        r : scalar
+            radius of the aperture in pixels.
+
+        Returns
+        -------
+        np.ndarray
+            boolean array of the telescope aperture (1=transparent, 0=opaque).
+        """
+        x, y = np.meshgrid(*(np.arange(s) for s in shape))
+        xc, yc = shape[0]/2, shape[1]/2
+        rs = np.sqrt((x-xc)**2 + (y-yc)**2)
+        grid = rs < r
+        return grid
+        
+        
         
     def flat_wavefront(self):
         """
