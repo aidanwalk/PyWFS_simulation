@@ -15,36 +15,28 @@ import numpy as np
 from astropy.io import fits
 # import matplotlib.pyplot as plt
 
-path2code = '/home/arcadia/mysoft/gradschool/useful/code_fragments/'
-sys.path.append(path2code)
-import Wavefront as wf # type: ignore
-import Zernike # type: ignore
-
 
 path2sim = '/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/'
 sys.path.append(path2sim)
 import plotter
 from PyWFS import WavefrontSensor
+import aberrations
 
 
 if __name__ == "__main__":
     N_pupil_px = 2**8
     WFE = np.radians(0.01/3600)
     
-    # Create the telescope aperture
-    pupil_array = wf.circular_aperture((N_pupil_px,N_pupil_px),
-                                       N_pupil_px/2)
-    
     # Init the wavefront sensor
-    WFS = WavefrontSensor(pupil_array)
+    WFS = WavefrontSensor()
     
     
     # Create a wavefont incoming to the WFS
     incoming_wavefront = WFS.flat_wavefront()
     # Inject an aberration in to the incoming wavefront
-    Z = Zernike.Zernike(pupil_array, rmax=N_pupil_px/2, wvln=WFS.wavelength)
-    aberration = Z.Spherical(WFE=WFE, wvln=WFS.wavelength)
-    incoming_wavefront.electric_field *= np.exp(1j * aberration.flatten())
+    Z = aberrations.Zernike(WFS.input_pupil_grid, WFS.telescope_diameter)
+    aberration = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
+    incoming_wavefront = aberrations.aberrate(incoming_wavefront, aberration)
     
     
     # Pass the wavefront through the WFS

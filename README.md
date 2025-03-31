@@ -5,7 +5,7 @@ This is a waveoptics simulation utilizing Fraunhofer Diffraction Theory. It is i
 
 ## Wavefront Sensor
 The file PyWFS.py contains a pyramid wavefront sensor class that can be used to measure the phase of an incoming wavefront via PyWFS. 
-The point of this class is to sample an incoming wavefront and output the measured wavefront slopes in <X> and <Y>. 
+The point of this class is to sample an incoming wavefront and output the measured wavefront slopes in X and Y. 
 
 
 ## Wavefront Reconstruction

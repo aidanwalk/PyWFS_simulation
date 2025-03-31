@@ -17,11 +17,6 @@ import plotter
 import aberrations
 
 
-path2code = '/home/arcadia/mysoft/gradschool/useful/code_fragments/'
-sys.path.append(path2code)
-import Wavefront as wf # type: ignore
-
-
 import matplotlib.pyplot as plt
 plt.close('all')  
 
@@ -33,25 +28,20 @@ if __name__ == "__main__":
     N_pupil_px = 2**8
     WFE = np.radians(1/3600)
     
-    # Create the telescope aperture
-    pupil_array = wf.circular_aperture((N_pupil_px,N_pupil_px),
-                                       N_pupil_px/2)
-    
     # Init the wavefront sensor
-    WFS = WavefrontSensor(pupil_array)
+    WFS = WavefrontSensor()
     
-    # %%
     # Inject an aberration in to the incoming wavefront
     Z = aberrations.Zernike(WFS.input_pupil_grid, WFS.telescope_diameter)
-    
     phase = Z.from_name('tilt x', WFE=WFE*WFS.telescope_diameter/2,
                         wavelength=WFS.wavelength)
     # phase = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -4, WFS.N_elements**2).ravel()
 
-
-    # %%
+    # Initialize the wavefront
     wavefront = WFS.flat_wavefront()
+    # Apply the aberration to the wavefront
     wavefront = aberrations.aberrate(wavefront, phase)
+    # Propagate the wavefront to the WFS
     aberration, focal_plane, pyramid, WFS_signal = WFS.light_progression(wavefront)
     
     

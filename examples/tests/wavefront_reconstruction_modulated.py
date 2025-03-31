@@ -58,19 +58,16 @@ def plot_phases(fname='phase_comparison.html'):
 
 if __name__ == "__main__":
     N_pupil_px = 2**8
-    WFE = np.radians(0.01/3600)
+    WFE = np.radians(0.1/3600)
     modulation_radius = 0.15 # arcsecond
     
     
     # -------------------------------------------------------------------------
     # Simualte a WFS measurement
     # -------------------------------------------------------------------------
-    # Create the telescope aperture
-    pupil_array = wf.circular_aperture((N_pupil_px,N_pupil_px),
-                                       N_pupil_px/2)
     
     # Init the wavefront sensor
-    WFS = ModulatedWavefrontSensor(pupil_array)
+    WFS = ModulatedWavefrontSensor()
     
     
     # Inject an aberration in to the incoming wavefront
@@ -79,7 +76,6 @@ if __name__ == "__main__":
     
     
     z1 = Z.from_name('tilt x', WFE=WFE, wavelength=WFS.wavelength)
-    # zy = Z.from_name('tilt y', WFE=WFE, wavelength=WFS.wavelength)
     z2 = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
     z3 = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -10, WFS.N_elements**2).ravel()
     z3 = hp.Field(z3, WFS.input_pupil_grid)
