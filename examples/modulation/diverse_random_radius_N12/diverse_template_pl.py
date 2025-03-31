@@ -6,6 +6,13 @@ and visualizing the results. The actual implementation of the modulation will
 mostly depend on the modulation scheme (i.e. constant radius, random radius,
 etc.)
 
+
+For this script in particular, each star will be modulated at a random radius
+and azimuth. In addition to the common aberration, each star also recieves a 
+unique and random power law phase screen of the same intensity as the common
+aberration. This is to simulate the effect of upper-atmospheric turbulence. 
+
+
 @author : Aidan Walk
 created on : Thu Mar 28 11:07 2025
 
@@ -175,16 +182,45 @@ def verify_reconstruction(radius, WFE=0.02/206265,
     # Create the interaction matrix
     imat = interaction_matrix(WFS.N_elements)
 
+    
     input_phases = []
     output_phases = []
-    for i, phase in enumerate(aberrs):
+    for i, common_phase in enumerate(aberrs):
         # Create a wavefont incoming to the WFS
         incoming_wavefront = WFS.flat_wavefront()
-        incoming_wavefront = aberrations.aberrate(incoming_wavefront, phase)
-        input_phases.append(phase.shaped)
-        # Pass the wavefront through the WFS
-        signal = WFS.discrete_modulation(incoming_wavefront,
-                                         modulation_points)
+        input_phases.append(common_phase.shaped)
+        
+        
+        signal = np.zeros(WFS.output_pupil_grid.shape)
+        focal_signal = []
+        star_phases = []
+        for point in modulation_points:
+            # add a unique phase to each star
+            this_wavefront = incoming_wavefront.copy()
+            unique_phase = wf.make_noise_pl(2.,
+                          WFS.pupil.shape[0],
+                          WFS.pupil.shape[0], 
+                          -7, 
+                          WFS.N_elements**2)
+            
+            star_phases.append(unique_phase+common_phase.shaped)
+            
+            # Apply the aberration to the wavefront
+            unique_phase = unique_phase.ravel()
+            this_wavefront = aberrations.aberrate(this_wavefront, 
+                                                  unique_phase, common_phase)
+            # Pass the wavefront through the WFS
+            signal += WFS.discrete_modulation(this_wavefront,
+                                            [point])
+            focal_signal.append(WFS.discrete_modulation(this_wavefront,
+                                            [point], 
+                                            propagator=WFS.pupil2image))
+            
+        
+        
+        plot_helper.make_gif(focal_signal, fname=f'focal_{i}.gif')
+        plot_helper.make_gif(star_phases, fname=f'pupil_{i}.gif')
+        
         
         # Recover the slopes
         sx, sy = WFS.measure_slopes(signal)
@@ -197,7 +233,11 @@ def verify_reconstruction(radius, WFE=0.02/206265,
                             fname=out_dir+'reconstruction.png', 
                             title=f'Random Radius Reconstruction, {N_stars} stars, '+\
                                 '$r_{mod}$='+f'{radius:.2f} as',)
-    return
+    
+    
+    
+    
+    return focal_signal
 
 # -----------------------------------------------------------------------------
 
@@ -251,18 +291,18 @@ if __name__ == '__main__':
     
     
     
-    visualize_modulation(radius=0.4, 
-                         title=plot_title)
+    # visualize_modulation(radius=0.4, 
+    #                      title=plot_title)
     
-    verify_reconstruction(radius=0.4, 
+    fp = verify_reconstruction(radius=0.4, 
                           WFE=0.1/206265, 
                           title=plot_title)
     
-    make_response_table()
+    # make_response_table()
     
-    plot_helper.plot_response(data_file=out_dir+out_file, 
-                              title=plot_title, 
-                              fname=out_dir+'response.png')
+    # plot_helper.plot_response(data_file=out_dir+out_file, 
+    #                           title=plot_title, 
+    #                           fname=out_dir+'response.png')
 
     
     

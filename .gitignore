@@ -1,4 +1,5 @@
 *.fits
 *.png
 *.html
+*.gif
 __pycache__

@@ -10,6 +10,39 @@ Created on Mon Mar 18 11:01 2025
 import numpy as np
 
 
+
+# -----------------------------------------------------------------------------
+# FUNCTIONS TO GENERATE MODULATION POINTS
+# -----------------------------------------------------------------------------
+
+def uniform_azimuth(radius, N_points):
+    # Generate discrete points in a circle at which to steer the wavefront
+    theta = np.linspace(0, 2*np.pi, N_points, endpoint=False)
+    x_modulation = radius * np.cos(theta)
+    y_modulation = radius * np.sin(theta)
+    
+    modulation_positions = np.vstack((x_modulation, y_modulation)).T
+    return modulation_positions
+
+
+def random_azimuth(radius, N_points):
+    # Generate random azimuthal angles for the modulation points
+    theta = np.random.uniform(0, 2*np.pi, N_points)
+    x_modulation = radius * np.cos(theta)
+    y_modulation = radius * np.sin(theta)
+    
+    modulation_positions = np.vstack((x_modulation, y_modulation)).T
+    return modulation_positions
+
+
+def random_radius(radius, N_points):
+    # Generate points randomly on the grid 
+    return np.random.uniform(-radius, radius, (N_points,2))
+
+# -----------------------------------------------------------------------------
+
+
+
 def random_positions(extent, density):
     """
     Generate the x,y positions of stars randomly in a field. Coordinates (0,0)

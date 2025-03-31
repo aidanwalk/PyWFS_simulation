@@ -16,6 +16,11 @@ aberration is an x-tilt. The output slope is measured by the mean of WFS
 x-slope image. The input slope is the input x-tilt aberration in [arcsec]
 
 The script template_pl.py is used for generating a response curve where the 
-inbput is a random power law phase screen. The output slope is measured by the 
+input is a random power law phase screen. The output slope is measured by the 
 RMS variation in the recovered wavefront phase. The input slope is the RMS
 deviation of the input phase in [radians]
+
+
+'diverse_' folder prefix is given to simulations where stars have non-common 
+aberrations. Each star is given a unique random power law aberration of the
+same intensity (RMS) as the common aberration. 

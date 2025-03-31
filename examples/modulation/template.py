@@ -6,6 +6,29 @@ and visualizing the results. The actual implementation of the modulation will
 mostly depend on the modulation scheme (i.e. constant radius, random radius,
 etc.)
 
+Parameters
+----------
+    out_file : str, optional
+        file name for the output response cuves,
+        by default 'response_curves.txt'
+    points_generator : callable, optional
+        function used to generate the modulation points,
+        by default uniform_azimuth. Can use any uniform_azimuth,
+        random_azimuth, or random_radius (defined in stars).
+    N_stars : int, optional
+        The number of stars (modulation points), by default 12
+    modulation_radii : list, optional
+        radii to modulate over, by default np.linspace(0, 1, 6)
+    input_WFE : _type_, optional
+        _description_, by default np.linspace(0, 0.5, 6)
+    WFS_kwargs : dict, optional
+        _description_, by default {}
+    N_iters : int, optional
+        _description_, by default 1
+    quantifier : str, optional
+        _description_, by default 'mean slope'
+        
+
 @author : Aidan Walk
 created on : Thu Mar 28 11:07 2025
 
@@ -25,41 +48,34 @@ sys.path.append('/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/')
 from reconstruct import interaction_matrix
 from ModulatedPyWFS import ModulatedWavefrontSensor
 import aberrations
+import stars
 
 sys.path.append('/home/arcadia/mysoft/gradschool/useful/code_fragments/')
 import Wavefront as wf
 
 
-# -----------------------------------------------------------------------------
-# FUNCTIONS TO GENERATE MODULATION POINTS
-# -----------------------------------------------------------------------------
 
-def uniform_azimuth(radius, N_points):
-    # Generate discrete points in a circle at which to steer the wavefront
-    theta = np.linspace(0, 2*np.pi, N_points, endpoint=False)
-    x_modulation = radius * np.cos(theta)
-    y_modulation = radius * np.sin(theta)
+# ==============================================================================
+# GLOBAL VARIABLES 
+# ==============================================================================
+plot_title = 'Uniform Azimuth Sampling'
+points_generator=stars.uniform_azimuth
+out_file='response_curves.txt' 
+out_dir = './'
+N_stars=12
+modulation_radii=np.linspace(0, 0.4, 11)
+input_WFE = np.linspace(0, 0.5, 41)
+WFS_kwargs={}
+N_iters=1
+
+
+# Init the wavefront sensor and the interaction matrix
+WFS = ModulatedWavefrontSensor(**WFS_kwargs)
+imat = interaction_matrix(WFS.N_elements)
+Z = aberrations.Zernike(WFS.input_pupil_grid, WFS.telescope_diameter)
     
-    modulation_positions = np.vstack((x_modulation, y_modulation)).T
-    return modulation_positions
 
-
-def random_azimuth(radius, N_points):
-    # Generate random azimuthal angles for the modulation points
-    theta = np.random.uniform(0, 2*np.pi, N_points)
-    x_modulation = radius * np.cos(theta)
-    y_modulation = radius * np.sin(theta)
-    
-    modulation_positions = np.vstack((x_modulation, y_modulation)).T
-    return modulation_positions
-
-
-def random_radius(radius, N_points):
-    # Generate points randomly on the grid 
-    return np.random.uniform(-radius, radius, (N_points,2))
-
-# -----------------------------------------------------------------------------
-
+# =============================================================================
 
 
 
@@ -233,51 +249,6 @@ def verify_reconstruction(radius,
 
 
 if __name__ == '__main__':
-    """
-    Simulate the response of a modulated PyWFS to a range of modulation 
-    radii. 
-
-    Parameters
-    ----------
-    out_file : str, optional
-        file name for the output response cuves,
-        by default 'response_curves.txt'
-    points_generator : callable, optional
-        function used to generate the modulation points,
-        by default uniform_azimuth. Can use any uniform_azimuth,
-        random_azimuth, or random_radius (defined above).
-    N_stars : int, optional
-        The number of stars (modulation points), by default 12
-    modulation_radii : list, optional
-        radii to modulate over, by default np.linspace(0, 1, 6)
-    input_WFE : _type_, optional
-        _description_, by default np.linspace(0, 0.5, 6)
-    WFS_kwargs : dict, optional
-        _description_, by default {}
-    N_iters : int, optional
-        _description_, by default 1
-    quantifier : str, optional
-        _description_, by default 'mean slope'
-    """
-    
-    plot_title = 'Uniform Azimuth Sampling'
-    points_generator=uniform_azimuth
-    out_file='response_curves.txt' 
-    out_dir = './'
-    N_stars=12
-    modulation_radii=np.linspace(0, 0.4, 11)
-    input_WFE = np.linspace(0, 0.5, 41)
-    WFS_kwargs={}
-    N_iters=1
-    
-    
-    # Init the wavefront sensor and the interaction matrix
-    WFS = ModulatedWavefrontSensor(**WFS_kwargs)
-    imat = interaction_matrix(WFS.N_elements)
-    Z = aberrations.Zernike(WFS.input_pupil_grid, WFS.telescope_diameter)
-    
-    
-    
     visualize_modulation(radius=0.4, 
                          title=plot_title)
     
