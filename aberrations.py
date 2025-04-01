@@ -136,3 +136,89 @@ class Zernike:
         n, m = self.COMMON_MODES[name]
         return self.phase_delay(n, m, WFE, wavelength)
 
+
+
+
+# =============================================================================
+# CODE BELOW IS TAKEN FROM:
+# @author: Miles Lucas
+# =============================================================================
+
+def pupil_to_image(im):
+	return np.fft.fft2(im,norm='ortho')
+
+
+
+def image_to_pupil(im):
+	return np.fft.ifft2(im,norm='ortho')
+
+
+
+def complex_amplitude(mag,phase):
+	'''
+	complex amplitude in terms of magnitude and phase
+	'''
+	return mag*np.cos(phase)+1j*mag*np.sin(phase)
+
+
+
+def xy_plane(dim):
+	'''
+	define xy plane to use for future functions
+	'''
+	grid=np.mgrid[0:dim,0:dim]
+	xy=np.sqrt((grid[0]-dim/2.+0.5)**2.+(grid[1]-dim/2.+0.5)**2.)
+	return xy
+
+
+
+def antialias(phin,imagepix,beam_ratio,Nact):
+	'''
+	anti-alias via a butterworth filter
+	'''
+	xy=xy_plane(imagepix)
+	buttf = lambda rgrid,eps,r0,n: 1./np.sqrt(1+eps**2.*(xy/r0)**n) #butterworth filter
+	phinput=phin-np.min(phin)
+	phfilt=np.abs(pupil_to_image(np.fft.fftshift(image_to_pupil(phinput))*(buttf(xy,1,Nact/2*beam_ratio*0.99,100)))) #Nact actuators across the pupil
+	phout=phfilt-np.mean(phfilt)
+	return phout
+
+
+
+p3i=lambda i: int(round(i))
+
+
+
+def make_noise_pl(wavefronterror,imagepix,pupilpix,pl,Nact):
+	'''
+	make noise with a user input power law:
+
+	(1) take white noise in image plane
+	(2) IFFT to pupil plane
+	(3) weight complex pupil plane (spatial frequency) by power law (power law is specified on the PSD, scaling is half that for amplitude)
+	(4) FFT back to image plane and take the real part
+
+	wavefronterror = rad rms WFE
+	'''
+
+	white_noise=np.random.random((imagepix,imagepix))*2.*np.pi #phase
+	xy=xy_plane(imagepix)
+	amplitude=(xy+1)**(pl/2.) #amplitude central value in xy grid is one, so max val is one in power law, everything else lower
+
+	amplitude[p3i(imagepix/2),p3i(imagepix/2)]=0. #remove piston
+
+	#remove alaising effects by cutting off power law just before the edge of the image
+	amplitude[np.where(xy>imagepix/2.-1)]=0.
+
+	amp=np.fft.fftshift(amplitude)
+	image_wavefront=complex_amplitude(amp,white_noise)
+	noise_wavefront=np.real(np.fft.fft2(image_wavefront))
+
+	beam_ratio=p3i(imagepix/pupilpix)
+
+	norm_factor=wavefronterror/np.std(antialias(noise_wavefront,imagepix,beam_ratio,Nact)[np.where(xy<pupilpix/2.)]) #normalization factor for phase error over the pupil of modes within the DM control region
+	phase_out_ini=noise_wavefront*norm_factor
+
+	phase_out=phase_out_ini
+
+	return phase_out

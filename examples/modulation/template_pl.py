@@ -36,7 +36,11 @@ import Wavefront as wf
 # FUNCTIONS FOR GENERATING THE RESPONSE CURVES
 # -----------------------------------------------------------------------------
 
-def average_response(points, WFE):
+def average_response(points, WFE, 
+                     N_iters=30,
+                     WFS=ModulatedWavefrontSensor(),
+                     N_stars=12,
+                     imat=None):
     """
     Compute the average response of the modulated PyWFS to a given wavefront
     error (WFE) over a specified number of iterations (N_iters).
@@ -90,24 +94,45 @@ def average_response(points, WFE):
 
 
 
-def generate_response(points, WFEs):
+def generate_response(points, WFEs,
+                     N_iters=30,
+                     WFS=ModulatedWavefrontSensor(),
+                     N_stars=12,
+                     imat=None):
     out_slope = []
     for i, WFE in enumerate(WFEs):
         print(f'\tWFE ={WFE:0.4f}', f'{i+1}/{len(WFEs)}')
-        out_slope.append(average_response(points, WFE))
+        out_slope.append(average_response(points, WFE,
+                                            N_iters=N_iters,
+                                            WFS=WFS,
+                                            N_stars=N_stars,
+                                            imat=imat))
         
     return out_slope
     
     
 
-def make_response_table():
+def make_response_table(modulation_radii=np.linspace(0, 0.4, 4),
+                        points_generator=stars.uniform_azimuth,
+                        N_stars=12,
+                        input_WFE=np.linspace(0, 2*3.14, 4),
+                        out_dir='./',
+                        out_file='response_curves.txt',
+                        WFS=ModulatedWavefrontSensor(),
+                        N_iters=30,
+                        imat=None):
+    
     # Make the response curve for the WFS for each modulation radius
     curves = []
     for i, radius in enumerate(modulation_radii): 
         print('\nModulation radius =', radius, f'{i+1}/{len(modulation_radii)}')
         # Generate an x,y list of modulation points. 
         modulation_points = points_generator(radius, N_points=N_stars)/206265
-        out_slopes = generate_response(modulation_points, input_WFE)
+        out_slopes = generate_response(modulation_points, input_WFE,
+                                        N_iters=N_iters,
+                                        WFS=WFS,
+                                        N_stars=N_stars,
+                                        imat=imat)
         
         # Make a table column for this response curve at this radius
         curves.append(out_slopes)
@@ -132,6 +157,10 @@ def make_response_table():
 
 
 def visualize_modulation(radius, 
+                         WFS, 
+                         N_stars=12,
+                         out_dir='./',
+                         points_generator=stars.uniform_azimuth,
                          title='Modulation Visualization',):
     # Create a wavefont incoming to the WFS
     incoming_wavefront = WFS.flat_wavefront()
@@ -153,28 +182,37 @@ def visualize_modulation(radius,
                                  title=f'{title}, {N_stars} stars',
                                  fname=out_dir+'light_progression.png')
     
+    return 
+
+
     
-    
-def verify_reconstruction(radius, WFE=0.02/206265, 
+def verify_reconstruction(radius,
+                          WFE=0.02/206265, 
+                          WFS=ModulatedWavefrontSensor(), 
+                          Z=None,
+                          points_generator=stars.uniform_azimuth,
+                          N_stars=12,
+                          out_dir='./',
                           title='Reconstruction Verification'):
+    
     modulation_points = points_generator(radius, N_points=N_stars) /206265
     
-    z1 = Z.from_name('tilt x', WFE=WFE*WFS.telescope_diameter/2, 
-                     wavelength=WFS.wavelength)
+    
+    z1 = Z.from_name('tilt x', WFE=WFE*WFS.telescope_diameter/2, wavelength=WFS.wavelength)
     z2 = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
-    z3 = wf.make_noise_pl(2., 
+    z3 = aberrations.make_noise_pl(2., 
                           WFS.pupil.shape[0],
                           WFS.pupil.shape[0], 
                           -7, 
                           WFS.N_elements**2).ravel()
-    
     z3 = hp.Field(z3, WFS.input_pupil_grid)
-    # zs = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -10, WFS.N_elements**2)
     aberrs = [z1, z2, z3]
+    
     
     # Create the interaction matrix
     imat = interaction_matrix(WFS.N_elements)
 
+    
     input_phases = []
     output_phases = []
     for i, phase in enumerate(aberrs):
@@ -195,76 +233,11 @@ def verify_reconstruction(radius, WFE=0.02/206265,
     # Make a plot of the recovered phase
     plot_helper.plot_phases(input_phases, output_phases,
                             fname=out_dir+'reconstruction.png', 
-                            title=f'Random Radius Reconstruction, {N_stars} stars, '+\
+                            title=f'{title}, {N_stars} stars, '+\
                                 '$r_{mod}$='+f'{radius:.2f} as',)
     return
 
 # -----------------------------------------------------------------------------
 
 
-
-if __name__ == '__main__':
-    """
-    Simulate the response of a modulated PyWFS to a range of modulation 
-    radii. 
-
-    Parameters
-    ----------
-    out_file : str, optional
-        file name for the output response cuves,
-        by default 'response_curves.txt'
-    points_generator : callable, optional
-        function used to generate the modulation points,
-        by default uniform_azimuth. Can use any uniform_azimuth,
-        random_azimuth, or random_radius (defined above).
-    N_stars : int, optional
-        The number of stars (modulation points), by default 12
-    modulation_radii : list, optional
-        radii to modulate over, by default np.linspace(0, 1, 6)
-    input_WFE : _type_, optional
-        _description_, by default np.linspace(0, 0.5, 6)
-    WFS_kwargs : dict, optional
-        _description_, by default {}
-    N_iters : int, optional
-        _description_, by default 1
-    quantifier : str, optional
-        _description_, by default 'mean slope'
-    """
-    
-    # GLOBAL PARAMETERS
-    # -----------------------------
-    plot_title = 'Random Radius Sampling'
-    points_generator=stars.random_radius
-    out_file='response_curves.txt' 
-    out_dir = './'
-    N_stars=12
-    modulation_radii=np.linspace(0, 0.4, 11)
-    input_WFE = np.linspace(0, 2*3.14, 11)
-    WFS_kwargs={}
-    N_iters=10
-    
-    
-    # Init the wavefront sensor and the interaction matrix
-    WFS = ModulatedWavefrontSensor(**WFS_kwargs)
-    imat = interaction_matrix(WFS.N_elements)
-    Z = aberrations.Zernike(WFS.input_pupil_grid, WFS.telescope_diameter)
-    
-    
-    
-    visualize_modulation(radius=0.4, 
-                         title=plot_title)
-    
-    verify_reconstruction(radius=0.4, 
-                          WFE=0.1/206265, 
-                          title=plot_title)
-    
-    make_response_table()
-    
-    plot_helper.plot_response(data_file=out_dir+out_file, 
-                              title=plot_title, 
-                              fname=out_dir+'response.png')
-
-    
-    
-    
     

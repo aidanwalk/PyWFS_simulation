@@ -67,7 +67,7 @@ def plot_response(data_file,
     plt.title(title)
     plt.xlabel('input wavefront slope [arcsec]')
     plt.ylabel('output wavefront slope [radians?]')
-    # plt.ylim(-0.06, 0.01)
+    plt.ylim(0.0, 0.06)
     plt.savefig(fname, dpi=300)
     return
 
