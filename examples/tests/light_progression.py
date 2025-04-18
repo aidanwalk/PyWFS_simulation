@@ -15,6 +15,7 @@ from reconstruct import interaction_matrix
 from PyWFS import WavefrontSensor
 import plotter
 import aberrations
+# 
 
 
 import matplotlib.pyplot as plt
@@ -35,6 +36,8 @@ if __name__ == "__main__":
     Z = aberrations.Zernike(WFS.input_pupil_grid, WFS.telescope_diameter)
     phase = Z.from_name('tilt x', WFE=WFE*WFS.telescope_diameter/2,
                         wavelength=WFS.wavelength)
+    phase += Z.from_name('tilt y', WFE=WFE*WFS.telescope_diameter/2,
+                        wavelength=WFS.wavelength)
     # phase = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -4, WFS.N_elements**2).ravel()
 
     # Initialize the wavefront
@@ -54,7 +57,7 @@ if __name__ == "__main__":
     
     # First, plot the incoming wavefront aberration
     ax[0].set_title('Incoming Wavefront Phase')
-    im = ax[0].imshow(phase.shaped, cmap='hsv')
+    im = ax[0].imshow(phase.shaped, cmap='hsv', origin='lower')
     plt.colorbar(im, fraction=0.046, pad=0.04, label='Phase [rad]')
     # Overplot the aperture of the telescope
     # alpha = ~WFS.aperture
@@ -66,18 +69,18 @@ if __name__ == "__main__":
     img = np.log10(focal_plane / focal_plane.max())
     img = hp.Field(img.ravel(), WFS.focal_grid)
     plt.subplot(142)
-    im = hp.imshow_field(img, cmap='bone', vmin=-6, vmax=0, grid_units=1/206265) # type: ignore
+    im = hp.imshow_field(img, cmap='bone', vmin=-6, vmax=0, grid_units=1/206265, origin='lower') # type: ignore
     # im = ax[1].imshow(img, cmap='bone', vmin=-6, vmax=0)
     plt.colorbar(im, fraction=0.046, pad=0.04)
     
     
     ax[2].set_title('Pyramid Phase Mask')
-    im = ax[2].imshow(pyramid, cmap='hsv')
+    im = ax[2].imshow(pyramid, cmap='hsv', origin='lower')
     plt.colorbar(im, fraction=0.046, pad=0.04, label='Phase [rad]')
     ax[2].axis('off')
     
     ax[3].set_title('WFS Signal')
-    im = ax[3].imshow(WFS_signal, cmap='bone')
+    im = ax[3].imshow(WFS_signal, cmap='bone', origin='lower')
     plt.colorbar(im, fraction=0.046, pad=0.04)
     ax[3].axis('off')
     

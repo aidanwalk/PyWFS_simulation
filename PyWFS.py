@@ -40,7 +40,8 @@ class WavefrontSensor:
                  Npx_foc=500, 
                  focal_extent=5/206265,
                  telescope_diameter=2.2,
-                 N_elements=36
+                 N_elements=36, 
+                 pyramidOptic=None,
                  ):
         
         if pupil is None:
@@ -66,13 +67,17 @@ class WavefrontSensor:
         self.pupil2image = hp.FraunhoferPropagator(self.input_pupil_grid, 
                                                    self.focal_grid).forward
         
+        
+        if pyramidOptic is None: pyramidOptic = hp.PyramidWavefrontSensorOptics    
         # And the propogator for the pyramid optic
-        self.pyramidOptic = hp.PyramidWavefrontSensorOptics(
+        self.pyramidOptic = pyramidOptic(
             self.pwfs_grid, 
             separation=self.telescope_diameter, 
-            wavelength_0=self.wavelength, 
-            q=6
+            wavelength_0=self.wavelength, # type: ignore
+            q=6,
+            num_airy=self.focal_extent * self.telescope_diameter / self.wavelength
             )
+        
         self.pupil2pupils = self.pyramidOptic.forward
         
         
@@ -127,7 +132,9 @@ class WavefrontSensor:
         np.ndarray
             boolean array of the telescope aperture (1=transparent, 0=opaque).
         """
-        x, y = np.meshgrid(*(np.arange(s) for s in shape))
+        center=0.
+        if shape[0]%2==0: center=0.5
+        x, y = np.meshgrid(*(np.arange(s)+center for s in shape))
         xc, yc = shape[0]/2, shape[1]/2
         rs = np.sqrt((x-xc)**2 + (y-yc)**2)
         grid = rs < r

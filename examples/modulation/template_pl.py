@@ -27,10 +27,6 @@ from ModulatedPyWFS import ModulatedWavefrontSensor
 import aberrations
 import stars
 
-sys.path.append('/home/arcadia/mysoft/gradschool/useful/code_fragments/')
-import Wavefront as wf
-
-
 
 # -----------------------------------------------------------------------------
 # FUNCTIONS FOR GENERATING THE RESPONSE CURVES
@@ -64,7 +60,7 @@ def average_response(points, WFE,
         # phase = Z.from_name('tilt x', 
         #                     WFE=input_slope, 
         #                     wavelength=WFS.wavelength)
-        phase = wf.make_noise_pl(WFE, 
+        phase = aberrations.make_noise_pl(WFE, 
                           WFS.pupil.shape[0],
                           WFS.pupil.shape[0], 
                           -9, 
