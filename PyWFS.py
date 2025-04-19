@@ -44,8 +44,9 @@ class WavefrontSensor:
                  pyramidOptic=None,
                  ):
         
-        if pupil is None:
-            pupil=self.circular_aperture((2**8, 2**8), 2**7)
+        if pupil is None or len(pupil)==2:
+            if pupil is None: pupil = (2**8, 2**8)
+            pupil=self.circular_aperture(pupil, pupil[0]/2)
             
         # Assign attributes
         self.pupil = pupil                          

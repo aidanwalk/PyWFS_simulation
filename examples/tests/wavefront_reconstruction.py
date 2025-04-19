@@ -63,7 +63,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
     
     # Init the wavefront sensor
-    WFS = WavefrontSensor()
+    WFS = WavefrontSensor(pupil=(N_pupil_px, N_pupil_px))
     
     
     # Inject an aberration in to the incoming wavefront

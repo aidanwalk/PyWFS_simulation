@@ -23,7 +23,7 @@ from hcipy.propagation import FraunhoferPropagator
 
 
 
-class PyramidArrayOptic(WavefrontSensorOptics):
+class PyramidArrayOptic2x2(WavefrontSensorOptics):
     '''The optical elements for a pyramid wavefront sensor.
 
     Parameters
@@ -269,7 +269,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
     # Setup the WFS class
     # -------------------------------------------------------------------------
-    WFS = WavefrontSensor(pyramidOptic=PyramidArrayOptic, N_elements=36)
+    WFS = WavefrontSensor(pyramidOptic=PyramidArrayOptic2x2, N_elements=36)
     imat = interaction_matrix(WFS.N_elements)
     
     print(WFS.pyramidOptic.pyramid_surface) # type: ignore

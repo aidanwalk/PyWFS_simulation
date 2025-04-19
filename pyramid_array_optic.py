@@ -239,7 +239,7 @@ if __name__ == "__main__":
     from reconstruct import interaction_matrix
     import aberrations
     
-    WFE = 1/2**0.5/206265
+    WFE = 1/206265
     
     
     # -------------------------------------------------------------------------
