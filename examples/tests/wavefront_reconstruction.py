@@ -74,7 +74,7 @@ if __name__ == "__main__":
     z1 = Z.from_name('tilt x', WFE=WFE*WFS.telescope_diameter/2, wavelength=WFS.wavelength)
     # z1 += Z.from_name('tilt y', WFE=WFE*WFS.telescope_diameter/2, wavelength=WFS.wavelength)
     z2 = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
-    z3 = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -10, WFS.N_elements**2).ravel()
+    z3 = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -7, WFS.N_elements**2).ravel()
     z3 = hp.Field(z3, WFS.input_pupil_grid)
     aberrs = [z1, z2, z3]
     

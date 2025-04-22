@@ -68,21 +68,7 @@ def plot_response_fits(response_file, order):
 
 
 
-def rotate_signal(signal_raw):
-    signal = scipy.ndimage.rotate(signal_raw, 45, reshape=False)
-    # crop the WFS_signal by a factor of 2**0.5 to match the original input
-    # grid size. 
-    crop_size = round(signal.shape[0] / 2**0.5)
-    center=False
-    # If the crop size is odd, need to add one pixel to the cropping, otherwise 
-    # the output will be off by one pixel. 
-    if crop_size % 2 == 1: center=True
-    signal = signal[
-        signal.shape[0]//2 - crop_size//2 : signal.shape[0]//2 + crop_size//2+center,
-        signal.shape[1]//2 - crop_size//2 : signal.shape[1]//2 + crop_size//2+center
-    ]
-    
-    return signal
+
     
     
 
@@ -131,18 +117,20 @@ def WFS_light_prop(WFS, phase, signal, wavefront, positions, fname='test.png'):
 
 
 if __name__ == "__main__":
-    r_mod = 0.4
+    r_mod = 0.8
     order = 5
-    N_stars = 2**0
-    input_rms_WFE = 0.5
-    curves_file = '/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/examples/modulation/random_radius_pl_N256/response_curves.txt'
+    N_stars = 2**3
+    input_rms_WFE = 2
+    # curves_file = '/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/examples/modulation/random_radius_pl_N256/response_curves.txt'
+    curves_file = '/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/examples/modulation/random_radius_N256_pl_r08/response_curves.txt'
     
-    # plot_response_fits(curves_file, order)
+    plot_response_fits(curves_file, order)
     
     # Open the response curves file
     response_curves = Table.read(curves_file, format='ascii.fixed_width')
     # Find the column name associated to this modulation radius
     col = f'r_{r_mod:.2f}'
+    # col = 'r_0.40'
     x = response_curves['input_WFE']
     y = response_curves[col]
     
@@ -167,11 +155,11 @@ if __name__ == "__main__":
     
     # Initialize the WFSs
     WFS1 = ModulatedWavefrontSensor(pyramidOptic=PyramidArrayOptic, 
-                                    focal_extent=r_mod*2/206265,
+                                    focal_extent=2.5*2/206265,
                                     N_elements=36
                                     )
     WFS2 = ModulatedWavefrontSensor(pyramidOptic=PyramidArrayOptic2x2, 
-                                    focal_extent=r_mod*4/206265,
+                                    focal_extent=r_mod*2/206265,
                                     N_elements=36
                                     )
     
@@ -181,7 +169,7 @@ if __name__ == "__main__":
     phase = aberrations.make_noise_pl(input_rms_WFE,
                                       WFS1.Npx_pupil,
                                       WFS1.Npx_pupil,
-                                      -8,
+                                      -7,
                                       WFS1.N_elements**2
                                       )
     phasefield = hp.Field(phase.ravel(), WFS1.input_pupil_grid)
@@ -198,7 +186,8 @@ if __name__ == "__main__":
     wavefront1 = aberrations.aberrate(wavefront1, phasefield)
     wavefront2 = aberrations.aberrate(wavefront2, phasefield)
     # Propagate the wavefront to the WFS
-    positions1 = stars.random_radius(0, N_points=N_stars) / 206265
+    # positions1 = stars.random_radius(0, N_points=N_stars) / 206265
+    positions1 = stars.uniform_azimuth(0.4, N_points=N_stars) / 206265
     positions2 = stars.random_radius(WFS2.focal_extent*206265/2, N_points=N_stars) / 206265
     
     
@@ -207,8 +196,8 @@ if __name__ == "__main__":
     signal_raw1 = WFS1.discrete_modulation(wavefront1, positions1)
     signal_raw2 = WFS2.discrete_modulation(wavefront2, positions2)
     # Rotate (to acommadate the rotated pyramid)
-    signal1 = rotate_signal(signal_raw1)
-    signal2 = rotate_signal(signal_raw2)
+    signal1 = WFS1.rotate(signal_raw1, crop=True)
+    signal2 = WFS2.rotate(signal_raw2, crop=True)
     
     
     # Measure slopes
@@ -222,8 +211,9 @@ if __name__ == "__main__":
     
     # Rotate the recovered phase
     ap = WFS1.circular_aperture((WFS1.N_elements, WFS1.N_elements), WFS1.N_elements/2)
-    recovered_phase1 = scipy.ndimage.rotate(recovered_phase1, -45, reshape=False) * ap
-    recovered_phase2 = scipy.ndimage.rotate(recovered_phase2, -45, reshape=False) * ap
+    recovered_phase1 = WFS1.rotate(recovered_phase1, angle=-45) * ap
+    # recovered_phase2 = scipy.ndimage.rotate(recovered_phase2, -45, reshape=False, order=5, prefilter=False) * ap
+    recovered_phase2 = WFS2.rotate(recovered_phase2, angle=-45) * ap
     phase = scipy.ndimage.zoom(phase, WFS1.N_elements/phase.shape[0]) * ap 
     
     

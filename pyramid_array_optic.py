@@ -67,7 +67,9 @@ class PyramidArrayOptic(WavefrontSensorOptics):
         self.focal_grid = make_focal_grid(q, self.num_airy, reference_wavelength=wavelength_0, pupil_diameter=D, focal_length=1)
         # Increase the size of the output grid by a factor of sqrt(2) to 
         # accommodate the rotated pyramid optic
-        self.output_grid = make_pupil_grid(qmin * input_grid.dims*2**0.5, qmin * D*2**0.5)
+        o = 2**0.5
+        
+        self.output_grid = make_pupil_grid(qmin * input_grid.dims*o, qmin * D*o)
         
         
         # Make all the optical elements
@@ -150,8 +152,7 @@ def plot_phases(input_phases, output_phases, fname='phase_comparison.html', titl
         im = axs[0,i].imshow(input_phase, **pltkwargs)
         plt.colorbar(im,fraction=0.046, pad=0.04)
         axs[0,i].axis('off')
-        im = axs[1,i].imshow(recovered_phase, vmin=-recovered_phase.max(), 
-                            vmax=recovered_phase.max(), 
+        im = axs[1,i].imshow(recovered_phase, 
                             **pltkwargs
                             )
         plt.colorbar(im,fraction=0.046, pad=0.04)
@@ -198,10 +199,10 @@ def verify_reconstruction(
         
         
         # Rotate the WFS signal to accommodate the pyramid orientation
-        signal = scipy.ndimage.rotate(signal, 45, reshape=False)
+        signal = scipy.ndimage.rotate(signal, 45, reshape=False, order=5, prefilter=False )
         # crop the WFS_signal by a factor of 2**0.5 to match the original input
         # grid size. 
-        crop_size = round(signal.shape[0] / 2**0.5)
+        crop_size = round(signal.shape[0] / o)
         center=False
         # If the crop size is odd, need to add one pixel to the cropping, otherwise 
         # the output will be off by one pixel. 
@@ -215,9 +216,10 @@ def verify_reconstruction(
         
         # Recover the slopes
         sx, sy = WFS.measure_slopes(signal)
+        # sx, sy = WFS.measure_slopes_rotated(signal)
         # Use it to solve for phases
         recovered_phase = imat.slope2phase(sx, sy)
-        recovered_phase = scipy.ndimage.rotate(recovered_phase, -45, reshape=False) *ap
+        recovered_phase = scipy.ndimage.rotate(recovered_phase, -45, reshape=False, order=5, prefilter=False)# *ap
         output_phases.append(recovered_phase)
     
     # Make a plot of the recovered phase
@@ -239,7 +241,7 @@ if __name__ == "__main__":
     from reconstruct import interaction_matrix
     import aberrations
     
-    WFE = 1/206265
+    WFE = 0.1/206265
     
     
     # -------------------------------------------------------------------------
@@ -248,7 +250,6 @@ if __name__ == "__main__":
     WFS = WavefrontSensor(pyramidOptic=PyramidArrayOptic, N_elements=36)
     imat = interaction_matrix(WFS.N_elements)
     
-    print(WFS.pyramidOptic.pyramid_surface) # type: ignore
     py = WFS.pyramidOptic
     
     
@@ -284,39 +285,64 @@ if __name__ == "__main__":
     # Propagate the wavefront to the WFS
     signal_raw = WFS.pass_through(wavefront)
     
+    plt.close('all')
+    plt.imshow(signal_raw, cmap='gray', origin='lower')
+    plt.savefig('signal_raw.png', dpi=300)
     
     
     
-    # -------------------------------------------------------------------------
-    # Rotate the WFS signal to accommodate the pyramid orientation
-    # -------------------------------------------------------------------------
-    signal = scipy.ndimage.rotate(signal_raw, 45, reshape=False)
+    a,b,c,d = WFS.split_quadrants_rotated(signal_raw)
+    plt.close('all')
+    plt.subplot(221)
+    plt.imshow(a, cmap='gray', origin='lower')
+    plt.subplot(222)
+    plt.imshow(b, cmap='gray', origin='lower')
+    plt.subplot(223)
+    plt.imshow(c, cmap='gray', origin='lower')
+    plt.subplot(224)
+    plt.imshow(d, cmap='gray', origin='lower')
+    plt.tight_layout()
+    plt.savefig('signal_raw_split.png', dpi=300)
+    
+    
+    
+    # # -------------------------------------------------------------------------
+    # # Rotate the WFS signal to accommodate the pyramid orientation
+    # # -------------------------------------------------------------------------
+    signal = scipy.ndimage.rotate(signal_raw, 45, reshape=False, order=5, prefilter=False )
     # crop the WFS_signal by a factor of 2**0.5 to match the original input
     # grid size. 
-    crop_size = round(signal.shape[0] / 2**0.5)
+    o = 2**0.5
+    crop_size = round(signal.shape[0] / o)
     center=False
     # If the crop size is odd, need to add one pixel to the cropping, otherwise 
     # the output will be off by one pixel. 
     if crop_size % 2 == 1: center=True
+    idx1 = signal.shape[0]//2 - crop_size//2 #-center
+    idx2 = signal.shape[0]//2 + crop_size//2 + center
+    idy1 = signal.shape[1]//2 - crop_size//2 #-center
+    idy2 = signal.shape[1]//2 + crop_size//2 + center
     signal = signal[
-        signal.shape[0]//2 - crop_size//2 : signal.shape[0]//2 + crop_size//2+center,
-        signal.shape[1]//2 - crop_size//2 : signal.shape[1]//2 + crop_size//2+center
+        idx1 : idx2,
+        idy1 : idy2
     ]
+    
+    
+    
+    
     
     
     # -------------------------------------------------------------------------
     # Measure WFS slopes
     # -------------------------------------------------------------------------
     sx, sy = WFS.measure_slopes(signal)
-    
-    
-    
+    # sx, sy = WFS.measure_slopes_rotated(signal_raw)
     
     
     # Recover the phase
     p = imat.slope2phase(sx, sy)
     ap = WFS.circular_aperture(p.shape, p.shape[0]/2).astype(float) 
-    p = scipy.ndimage.rotate(p, -45, reshape=False) *ap
+    p = scipy.ndimage.rotate(p, -45, reshape=False, order=0, prefilter=False) #*ap
     # -------------------------------------------------------------------------
     
     
@@ -358,7 +384,7 @@ if __name__ == "__main__":
     ax[2].axis('off')
     
     ax[3].set_title('WFS Signal')
-    im = ax[3].imshow(signal, cmap='bone', origin='lower')
+    im = ax[3].imshow(signal_raw, cmap='bone', origin='lower')
     plt.colorbar(im, fraction=0.046, pad=0.04)
     ax[3].axis('off')
     

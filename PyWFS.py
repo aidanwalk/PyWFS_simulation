@@ -9,6 +9,7 @@ Created on Mon Mar  3 14:32:26 2025
 
 import numpy as np
 import hcipy as hp
+from scipy import ndimage
 
 
 class WavefrontSensor:
@@ -256,8 +257,8 @@ class WavefrontSensor:
         sy *= self.telescope_diameter / self.N_elements
         
         return sx, sy
-        
-        
+    
+    
 
     def light_progression(self, wavefront):
         """
@@ -281,3 +282,26 @@ class WavefrontSensor:
         WFS_signal = self.pupil2pupils(wavefront).intensity.shaped
 
         return pupil_image, focal_image, pyramid_image, WFS_signal
+    
+    
+    
+    def rotate(self, signal, crop=False, angle=45):
+        signal = ndimage.rotate(signal, angle, reshape=False, 
+                                order=5, prefilter=False)
+        # crop the WFS_signal by a factor of 2**0.5 to match the original input
+        # grid size. (rotating a square by 45 degrees results in the new side
+        # length being sqrt(2) times the original side length)
+        if not crop: return signal
+        
+        crop_size = round(signal.shape[0] / 2**0.5)
+        center=False
+        # If the crop size is odd, need to add one pixel to the cropping, otherwise 
+        # the output will be off by one pixel. 
+        if crop_size % 2 == 1: center=True
+        signal = signal[
+            signal.shape[0]//2 - crop_size//2 : signal.shape[0]//2 + crop_size//2+center,
+            signal.shape[1]//2 - crop_size//2 : signal.shape[1]//2 + crop_size//2+center
+        ]
+        
+        return signal
+        
