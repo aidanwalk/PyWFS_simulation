@@ -82,8 +82,7 @@ def average_response(points, WFE,
         
         # Compute the RMS of the phase
         p = imat.slope2phase(sx, sy)
-        # outs.append(np.std(p))
-        outs.append(np.max(p))
+        outs.append(np.std(p))
     
     
     return np.mean(outs)

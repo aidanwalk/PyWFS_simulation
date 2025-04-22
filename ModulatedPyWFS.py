@@ -62,6 +62,7 @@ class ModulatedWavefrontSensor(WavefrontSensor):
         return signal
     
 
+
     def discrete_modulation(self, wavefront, modulation_positions, propagator=None):
         """
         Passes the wavefront through discrete positions in the focal plane, 
