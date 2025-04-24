@@ -116,11 +116,11 @@ def WFS_light_prop(WFS, phase, signal, wavefront, positions, fname='test.png'):
 
 
 if __name__ == "__main__":
-    r_mod = 0.5
-    N_iters = 30
+    r_mod = 1
+    N_iters = 10
     gain_polymonial_order = 5
     N_stars = 2**8
-    
+    N_pyramids = 3
     input_rms_WFE = 3
     orders = np.arange(-12, -4, 1)
     # curves_file = '/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/examples/modulation/random_radius_pl_N256/response_curves.txt'
@@ -166,9 +166,9 @@ if __name__ == "__main__":
                                     N_elements=36
                                     )
     WFS2 = ModulatedWavefrontSensor(pyramidOptic=PyramidArrayOptic, 
-                                    focal_extent=r_mod*2/206265*2,
-                                    N_elements=36, 
-                                    py_kwargs={'N_pyramids': 2,}
+                                    focal_extent=r_mod*2/206265,#*N_pyramids,
+                                    N_elements=36,
+                                    py_kwargs = {'N_pyramids':N_pyramids}
                                     )
     
     imat = interaction_matrix(WFS1.N_elements)
@@ -182,6 +182,7 @@ if __name__ == "__main__":
     
     errs1, errs2 = [], []
     errsstd1, errsstd2 = [], []
+    j = 0
     for order in orders:
         print(f'order = {order}')
         errlist1, errlist2 = [], []
@@ -220,6 +221,7 @@ if __name__ == "__main__":
             signal2 = WFS2.rotate(signal_raw2, crop=True)
             
             
+            
             # Measure slopes
             sx1, sy1 = WFS1.measure_slopes(signal1)
             sx2, sy2 = WFS2.measure_slopes(signal2)
@@ -250,11 +252,17 @@ if __name__ == "__main__":
             errlist1.append(np.std(err1))
             errlist2.append(np.std(err2))
             
+        if j==0:
+                WFS_light_prop(WFS1, phase, signal1, WFS1.flat_wavefront(), positions1, 
+                fname='WFS1_light_progression.png')
+                WFS_light_prop(WFS2, phase, signal2, WFS2.flat_wavefront(), positions2,
+                fname='WFS2_light_progression.png')
         print()
         errs1.append(np.mean(errlist1))
         errs2.append(np.mean(errlist2))
         errsstd1.append(np.std(errlist1))
         errsstd2.append(np.std(errlist2))
+        j+=1
         
         # %%
         
@@ -301,10 +309,7 @@ if __name__ == "__main__":
         
     # %%
     
-    WFS_light_prop(WFS1, phase, signal1, WFS1.flat_wavefront(), positions1, 
-                fname='WFS1_light_progression.png')
-    WFS_light_prop(WFS2, phase, signal2, WFS2.flat_wavefront(), positions2,
-                fname='WFS2_light_progression.png')
+    
     
     
     # %%

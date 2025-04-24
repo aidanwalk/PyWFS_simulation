@@ -34,6 +34,13 @@ class WavefrontSensor:
         The diameter of the telescope in meters. The default is 2.2.
     N_elements : int, optional
         The total number of actuator elements in the pupil. The default is 36.
+    pyramidOptic : callable, optional
+        The pyramid optic to use for the wavefront sensor. If None, the 
+        default is the HCIPy PyramidWavefrontSensorOptics. The default is None.
+    py_kwargs : dict, optional
+        Additional keyword arguments to pass to the pyramid optic. The default
+        is {}.
+    ---------------------------------------------------------------------------
     """
     def __init__(self, 
                  pupil=None,
@@ -43,6 +50,7 @@ class WavefrontSensor:
                  telescope_diameter=2.2,
                  N_elements=36, 
                  pyramidOptic=None,
+                 py_kwargs = {},
                  ):
         
         if pupil is None or len(pupil)==2:
@@ -77,7 +85,8 @@ class WavefrontSensor:
             separation=self.telescope_diameter, 
             wavelength_0=self.wavelength, # type: ignore
             q=6,
-            num_airy=self.focal_extent * self.telescope_diameter / self.wavelength
+            num_airy=self.focal_extent * self.telescope_diameter / self.wavelength, 
+            **py_kwargs, 
             )
         
         self.pupil2pupils = self.pyramidOptic.forward

@@ -24,7 +24,6 @@ from ModulatedPyWFS import ModulatedWavefrontSensor
 import aberrations
 import stars
 from pyramid_array_optic import PyramidArrayOptic
-from pyramid_array_optic_2x2 import PyramidArrayOptic2x2
 
 
 def plot_response_fits(response_file, order):
@@ -122,26 +121,26 @@ if __name__ == "__main__":
     N_stars = 2**8
     input_rms_WFE = 3
     # orders = np.arange(-10, -5, 1)
-    orders = [-8]
-    curves_file = '/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/examples/modulation/random_radius_pl_N256/response_curves.txt'
-    # curves_file = '/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/examples/modulation/random_radius_N256_pl_r08/response_curves.txt'
+    # orders = [-8]
+    # curves_file = '/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/examples/modulation/random_radius_pl_N256/response_curves.txt'
+    # # curves_file = '/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/examples/modulation/random_radius_N256_pl_r08/response_curves.txt'
     
-    # plot_response_fits(curves_file, order)
+    # # plot_response_fits(curves_file, order)
     
-    # Open the response curves file
-    response_curves = Table.read(curves_file, format='ascii.fixed_width')
-    # Find the column name associated to this modulation radius
-    col = f'r_{r_mod:.2f}'
-    # col = 'r_0.40'
-    x = response_curves['input_WFE']
-    y = response_curves[col]
+    # # Open the response curves file
+    # response_curves = Table.read(curves_file, format='ascii.fixed_width')
+    # # Find the column name associated to this modulation radius
+    # col = f'r_{r_mod:.2f}'
+    # # col = 'r_0.40'
+    # x = response_curves['input_WFE']
+    # y = response_curves[col]
     
-    # Fit a polymonial to the data
-    poly = np.polyfit(x, y, gain_polymonial_order)
-    # Evaluate the polynomial
-    y_fit = np.polyval(poly, x)
-    # Find the WFS gain
-    gain = input_rms_WFE / np.polyval(poly, input_rms_WFE)
+    # # Fit a polymonial to the data
+    # poly = np.polyfit(x, y, gain_polymonial_order)
+    # # Evaluate the polynomial
+    # y_fit = np.polyval(poly, x)
+    # # Find the WFS gain
+    # gain = input_rms_WFE / np.polyval(poly, input_rms_WFE)
     
     
     # -------------------------------------------------------------------------
@@ -160,18 +159,21 @@ if __name__ == "__main__":
     # Initialize the WFSs
     WFS1 = ModulatedWavefrontSensor(pyramidOptic=PyramidArrayOptic, 
                                     focal_extent=r_mod*2/206265,
-                                    N_elements=36
+                                    N_elements=36,
+                                    py_kwargs={'N_pyramids': 1,}
                                     )
-    WFS2 = ModulatedWavefrontSensor(pyramidOptic=PyramidArrayOptic2x2, 
+    WFS2 = ModulatedWavefrontSensor(pyramidOptic=PyramidArrayOptic, 
                                     focal_extent=r_mod*2/206265,
-                                    N_elements=36
+                                    N_elements=36,
+                                    py_kwargs={'N_pyramids': 2,}
                                     )
     
     imat = interaction_matrix(WFS1.N_elements)
     Z = aberrations.Zernike(WFS1.input_pupil_grid, WFS1.telescope_diameter)
     
     errs1, errs2 = [], []
-    for mode in list(Z.COMMON_MODES.keys())[3:]:
+    i=0
+    for mode in list(Z.COMMON_MODES.keys())[:]:
         print(f'order = {mode}')
         
         phasefield = Z.from_name(mode, 0.1/206265, WFS1.wavelength)
@@ -186,8 +188,10 @@ if __name__ == "__main__":
         wavefront1 = aberrations.aberrate(wavefront1, phasefield)
         wavefront2 = aberrations.aberrate(wavefront2, phasefield)
         # Propagate the wavefront to the WFS
-        positions1 = stars.random_radius(WFS1.focal_extent*206265/2, N_points=N_stars) / 206265
+        # positions1 = stars.random_radius(WFS1.focal_extent*206265/2, N_points=N_stars) / 206265
         # positions2 = stars.random_radius(WFS2.focal_extent*206265/2, N_points=N_stars) / 206265
+        # positions1 = stars.uniform_azimuth(0.2/206265, 12)
+        positions1 = np.array([[0,0]])
         positions2 = positions1
         
         
@@ -212,17 +216,16 @@ if __name__ == "__main__":
         
         
         # Rotate the recovered phase
-        ap = WFS1.circular_aperture((WFS1.N_elements, WFS1.N_elements), WFS1.N_elements/2)
+        ap = WFS1.circular_aperture((WFS1.N_elements, WFS1.N_elements), WFS1.N_elements/2-1)
         recovered_phase1 = WFS1.rotate(recovered_phase1, angle=-45) * ap
-        # recovered_phase2 = scipy.ndimage.rotate(recovered_phase2, -45, reshape=False, order=5, prefilter=False) * ap
         recovered_phase2 = WFS2.rotate(recovered_phase2, angle=-45) * ap
-        phase = scipy.ndimage.zoom(phase, WFS1.N_elements/phase.shape[0]) * ap 
+        phase = scipy.ndimage.zoom(phase, WFS1.N_elements/phase.shape[0], ) * ap 
         
-        
-        WFS_light_prop(WFS1, phase, signal1, wavefront1, positions1, 
-                    fname='WFS1_light_progression.png')
-        WFS_light_prop(WFS2, phase, signal2, wavefront2, positions2,
-                    fname='WFS2_light_progression.png')
+        if i==0:
+            WFS_light_prop(WFS1, phase, signal1, wavefront1, positions1, 
+                        fname='WFS1_light_progression.png')
+            WFS_light_prop(WFS2, phase, signal2, wavefront2, positions2,
+                        fname='WFS2_light_progression.png')
         
         
         # recovered_phase1 = recovered_phase1 * gain
@@ -237,39 +240,43 @@ if __name__ == "__main__":
         
         plt.figure(figsize=(12, 7), tight_layout=True)
         plt.clf()
+        plt.suptitle(f'{mode}')
+        
+        plt_kwargs = {'origin': 'lower', 'cmap': 'bone', 'vmin': -6, 'vmax': 6}
         
         plt.subplot(231)
         plt.title('input phase')
-        im = plt.imshow(phase, origin='lower', cmap='bone', vmin=-3, vmax=3)
+        im = plt.imshow(phase, **plt_kwargs)
         plt.colorbar(im, fraction=0.046, pad=0.04)
         
         plt.subplot(232)
         plt.title('recovered phase 1x1')
-        im = plt.imshow(recovered_phase1, origin='lower', cmap='bone', vmin=-3, vmax=3)
+        im = plt.imshow(recovered_phase1, **plt_kwargs)
         plt.colorbar(im, fraction=0.046, pad=0.04)
         
         plt.subplot(233)
         plt.title('recovered phase error')
-        im = plt.imshow(err1, origin='lower', cmap='bone', vmin=-3, vmax=3)
+        im = plt.imshow(err1, **plt_kwargs)
         plt.colorbar(im, fraction=0.046, pad=0.04)
         
         plt.subplot(235)
         plt.title('recovered phase 2x2')
-        im = plt.imshow(recovered_phase2, origin='lower', cmap='bone', vmin=-3, vmax=3)
+        im = plt.imshow(recovered_phase2, **plt_kwargs)
         plt.colorbar(im, fraction=0.046, pad=0.04)
         
         plt.subplot(236)
         plt.title('recovered phase error')
-        im = plt.imshow(err2, origin='lower', cmap='bone', vmin=-3, vmax=3)
+        im = plt.imshow(err2, **plt_kwargs)
         plt.colorbar(im, fraction=0.046, pad=0.04)
         
-        FOM1 = np.std(err1)
-        FOM2 = np.std(err2)
-        plt.annotate(f'RMS 1x1: {FOM1:0.3f}', (0.15, 0.3), xycoords='figure fraction',)
-        plt.annotate(f'RMS 2x2: {FOM2:0.3f}', (0.15, 0.25), xycoords='figure fraction',)
+        FOM1 = np.std(err1) / np.std(phase)
+        FOM2 = np.std(err2) / np.std(phase)
+        plt.annotate('RMS(recovered - input)/RMS(input)', (0.15, 0.35), xycoords='figure fraction',)
+        plt.annotate(f'1x1 array: {FOM1:0.3f}', (0.15, 0.3), xycoords='figure fraction',)
+        plt.annotate(f'2x2 array: {FOM2:0.3f}', (0.15, 0.25), xycoords='figure fraction',)
         fname = mode.replace(' ', '_')+'.png'
-        plt.savefig(fname, dpi=200)
-        
+        plt.savefig(f'{i}'+fname, dpi=200)
+        i+=1
         # assert False
         
         
