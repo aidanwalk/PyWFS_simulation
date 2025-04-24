@@ -2,4 +2,5 @@
 *.png
 *.html
 *.gif
+.vscode
 __pycache__
