@@ -293,8 +293,8 @@ class WavefrontSensor:
         return pupil_image, focal_image, pyramid_image, WFS_signal
     
     
-    
-    def rotate(self, signal, crop=False, angle=45):
+    @ staticmethod
+    def rotate(signal, crop=False, angle=45):
         signal = ndimage.rotate(signal, angle, reshape=False, 
                                 order=5, prefilter=False)
         # crop the WFS_signal by a factor of 2**0.5 to match the original input

@@ -21,15 +21,26 @@ import numpy as np
 # from hcipy import inverse_tikhonov
 
 class interaction_matrix(np.ndarray):
+    """
+    A synthetic interaction matrix for a Southwell geometry.
+    This class is a subclass of numpy's ndarray and is used to create an
+    interaction matrix for a Southwell geometry. The interaction matrix is
+    used to convert wavefront slopes into phase values (see method 
+    slope2phase).
+    
+    parameters
+    ----------
+    N : int
+        The number of sub-apertures (elements) in one dimension. 
+        The default is 36.
+        
+    """
     def __new__(cls, N=36, **kwargs):
         # Init the interaction matrix
         obj = np.empty((N**2,2*N**2)).view(cls)
         
         # Set the attributes
         obj.N = N
-        # obj.D_tel = telescope_dia
-        # obj.h = obj.D_tel / obj.N
-        
         # Populate the interaction matix
         obj[:] = obj.construct_interaction_matrix()
         
@@ -177,4 +188,58 @@ class interaction_matrix(np.ndarray):
         return phases
 
 
+
+
+import aberrations
+class zernike_decomposition(aberrations.Zernike):
+    """
+    A class for Zernike decomposition of wavefront phase.
+    """
+    def __init__(self, grid, D, **kwargs):
+        super().__init__(grid, D, **kwargs)
+        
+        
+    def decompose(self, phases, N_modes=10, **kwargs):
+        """
+        Decomposes the wavefront phase into Zernike modes.
+        
+        Parameters
+        ----------
+        N_orders : int
+            The number of Zernike orders to decompose into.
+        
+        Returns
+        -------
+        coeffs : vector
+            The coefficients on each Zernike mode.
+        """
+        # Get the Zernike modes
+        zernike_modes = self.get_zernike_modes(N_modes)
+        
+        # Construct the Zernike basis set
+        Z = np.zeros((self.grid.shape[0]*self.grid.shape[1], N_modes))
+        for i, mode in enumerate(zernike_modes):
+            Z[:, i] = self.evaluate(*mode, **kwargs).flatten()
+        
+        # Invert the Zernike basis set
+        Z_inv = np.linalg.pinv(Z)
+        # Get the coefficients
+        coeffs = Z_inv @ phases
+        return coeffs
     
+    
+    def get_zernike_modes(self, N_modes=10):
+        """ 
+        Returns the (n,m) pairs of Zernike modes for a given number of orders.
+        (Noll's sequential indicies)
+        
+        Parameters
+        ----------
+        N_orders : int
+            The first N Zernike orders.
+        """
+        assert len(self.COMMON_MODES) >= N_modes,\
+        f"Only {len(self.COMMON_MODES)}  Zernike modes available, attemprting to get {N_modes}."
+        
+        return list(self.COMMON_MODES.values())[0:N_modes]
+        

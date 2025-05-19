@@ -55,7 +55,7 @@ def plot_phases(fname='phase_comparison.html'):
 
 if __name__ == "__main__":
     N_pupil_px = 2**8
-    WFE = np.radians(0.1/3600)
+    WFE = np.radians(0.2/3600)
     
     
     # -------------------------------------------------------------------------
@@ -69,40 +69,48 @@ if __name__ == "__main__":
     # Inject an aberration in to the incoming wavefront
     Z = aberrations.Zernike(grid=WFS.input_pupil_grid,
                             D=WFS.telescope_diameter)
+    Z_decomp = zernike_decomposition(grid=WFS.signal_grid,
+                                     D=WFS.telescope_diameter)
     
     
-    z1 = Z.from_name('tilt x', WFE=WFE*WFS.telescope_diameter/2, wavelength=WFS.wavelength)
-    # z1 += Z.from_name('tilt y', WFE=WFE*WFS.telescope_diameter/2, wavelength=WFS.wavelength)
-    z2 = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
-    z3 = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -7, WFS.N_elements**2).ravel()
-    z3 = hp.Field(z3, WFS.input_pupil_grid)
-    aberrs = [z1, z2, z3]
+    phase = Z.from_name('tilt x', WFE=WFE*WFS.telescope_diameter/2, wavelength=WFS.wavelength)
+    # phase += Z.from_name('tilt y', WFE=WFE*WFS.telescope_diameter/2, wavelength=WFS.wavelength)
+    # phase += Z.from_name('defocus', WFE=0.01/206265, wavelength=WFS.wavelength)
+    # z3 = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -7, WFS.N_elements**2).ravel()
+    # z3 = hp.Field(z3, WFS.input_pupil_grid)
+    # aberrs = [z1, z2, z3]
     
     # Create the interaction matrix
     imat = interaction_matrix(WFS.N_elements)
 
-    for i, phase in enumerate(aberrs):
-        # Create a wavefont incoming to the WFS
-        incoming_wavefront = WFS.flat_wavefront()
-        aberrations.aberrate(incoming_wavefront, phase)
-        
-        # input_phase = incoming_wavefront.phase.shaped
-        hdu = fits.PrimaryHDU(phase.shaped)
-        hdu.writeto(f'./aberrations/input_{i}.fits', overwrite=True)
+    # Create a wavefont incoming to the WFS
+    incoming_wavefront = WFS.flat_wavefront()
+    aberrations.aberrate(incoming_wavefront, phase)
     
-        # Pass the wavefront through the WFS
-        signal = WFS.pass_through(incoming_wavefront)
-        
-        # Recover the slopes
-        sx, sy = WFS.measure_slopes(signal)
-        # Use it to solve for phases
-        recovered_phase = imat.slope2phase(sx, sy)
-        
-        hdu = fits.PrimaryHDU(recovered_phase)
-        hdu.writeto(f'./aberrations/recovered_{i}.fits', overwrite=True)
+    # Pass the wavefront through the WFS
+    signal = WFS.pass_through(incoming_wavefront)
+    
+    # Recover the slopes
+    sx, sy = WFS.measure_slopes(signal)
+    # Use it to solve for phases
+    recovered_phase = imat.slope2phase(sx, sy)
     
     
-    # Make a plot of the recovered phase
-    plot_phases()
+    # Perform the Zernike decomposition
+    a = Z_decomp.decompose(recovered_phase.flatten(), N_modes=15)
+    
+    
+    plt.figure()
+    plt.clf()
+    plt.subplot(121)
+    plt.imshow(recovered_phase, origin='lower', cmap='bone')
+    
+    
+    plt.subplot(122)
+    plt.scatter(np.arange(len(a)), a)
+    
+    plt.tight_layout()
+    plt.savefig('modal_phase.png', dpi=300)
+    
     
 
