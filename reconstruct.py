@@ -239,7 +239,7 @@ class zernike_decomposition(aberrations.Zernike):
             The first N Zernike orders.
         """
         assert len(self.COMMON_MODES) >= N_modes,\
-        f"Only {len(self.COMMON_MODES)}  Zernike modes available, attemprting to get {N_modes}."
+        f"Only {len(self.COMMON_MODES)}  Zernike modes available, attempting to get {N_modes}."
         
         return list(self.COMMON_MODES.values())[0:N_modes]
         

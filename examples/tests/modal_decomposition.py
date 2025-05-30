@@ -17,9 +17,9 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 
 
-path2code = '/home/arcadia/mysoft/gradschool/useful/code_fragments/'
-sys.path.append(path2code)
-import Wavefront as wf # type: ignore
+# path2code = '/home/arcadia/mysoft/gradschool/useful/code_fragments/'
+# sys.path.append(path2code)
+# import Wavefront as wf # type: ignore
 
 import sys
 sys.path.append('/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/')
