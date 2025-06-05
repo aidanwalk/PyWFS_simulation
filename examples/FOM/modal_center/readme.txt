@@ -1,6 +1,8 @@
 The purpose of this script is to see how well the WFS can recover different 
 Zernike aberrations, and the effect of the "negative" edges in the pyramid 
 array. 
+These simulations show the negative facets in a pyramid array are a problem!
+
 
 Stars fall directly in the center of the array, so for the 1x1 pyramid array, 
 this is directly on the pyramid tip. 

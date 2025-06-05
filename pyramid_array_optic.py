@@ -45,10 +45,11 @@ class PyramidArrayOptic(WavefrontSensorOptics):
     num_airy : scalar
         The radius of the focal plane spatial filter in units of lambda/D at the reference wavelength.
     '''
-    def __init__(self, input_grid, N_pyramids=1, separation=None, wavelength_0=1.0, q=None, num_airy=None, refractive_index=lambda x: 1.5):
+    def __init__(self, input_grid, N_pyramids=1, separation=None, wavelength_0=1.0, q=None, num_airy=None, refractive_index=lambda x: 1.5, rotated=True):
         if not input_grid.is_regular:
             raise ValueError('The input grid must be a regular grid.')
 
+        self.rotated = rotated
         self.input_grid = input_grid
         D = np.max(input_grid.delta * (input_grid.shape - 1))
 

@@ -90,27 +90,20 @@ class ModulatedWavefrontSensor(WavefrontSensor):
 
         """
         if propagator is None:
-            propagator = self.pupil2pupils
+            propagator = self.pass_through
 
         # Create a tip-tilt mirror to steer the wavefront
         tip_tilt_mirror = hp.optics.TipTiltMirror(wavefront.grid)
 
         # Compute the wavefront after passing through the wavefront sensor 
         # at each modulation position. 
-        wf_modulated = []
+        signal = np.zeros(self.output_pupil_grid.shape)
         for point in modulation_positions:
             tip_tilt_mirror.actuators = point/2
             modulated_wavefront = tip_tilt_mirror.forward(wavefront)
             
-            # wf_modulated.append(self.pyramidOptic.forward(modulated_wavefront))
-            wf_modulated.append(propagator(modulated_wavefront))
-
-        # Sum the modulated wavefront intensities to get the total modulated 
-        # signal
-        signal = np.zeros(wf_modulated[0].intensity.shaped.shape)
-        for wf in wf_modulated:
-            signal += wf.intensity.shaped
-
+            signal += propagator(modulated_wavefront)
+        
         return signal
 
 

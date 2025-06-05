@@ -78,16 +78,28 @@ class WavefrontSensor:
                                                    self.focal_grid).forward
         
         
-        if pyramidOptic is None: pyramidOptic = hp.PyramidWavefrontSensorOptics    
-        # And the propogator for the pyramid optic
-        self.pyramidOptic = pyramidOptic(
-            self.pwfs_grid, 
-            separation=self.telescope_diameter, 
-            wavelength_0=self.wavelength, # type: ignore
-            q=6,
-            num_airy=self.focal_extent * self.telescope_diameter / self.wavelength, 
-            **py_kwargs, 
-            )
+        if pyramidOptic is None: 
+            pyramidOptic = hp.PyramidWavefrontSensorOptics    
+            # And the propogator for the pyramid optic
+            self.pyramidOptic = pyramidOptic(
+                self.input_pupil_grid,
+                self.output_pupil_grid, 
+                separation=self.telescope_diameter, 
+                wavelength_0=self.wavelength, # type: ignore
+                q=6,
+                num_airy=self.focal_extent * self.telescope_diameter / self.wavelength, 
+                **py_kwargs, 
+                )
+        else: 
+            # And the propogator for the pyramid optic
+            self.pyramidOptic = pyramidOptic(
+                self.pwfs_grid, 
+                separation=self.telescope_diameter, 
+                wavelength_0=self.wavelength, # type: ignore
+                q=6,
+                num_airy=self.focal_extent * self.telescope_diameter / self.wavelength, 
+                **py_kwargs, 
+                )
         
         self.pupil2pupils = self.pyramidOptic.forward
         
@@ -127,7 +139,7 @@ class WavefrontSensor:
 
     
     @ staticmethod
-    def circular_aperture(shape, r):
+    def circular_aperture(shape, r, null_value=None):
         """
         Creates a cicrular telescope aperture of a given shape and radius.
 
@@ -137,18 +149,26 @@ class WavefrontSensor:
             Number of pixels in the x and y directions (height, width).
         r : scalar
             radius of the aperture in pixels.
+        null_value : bool, optional
+            The fill value to assign to the opaque part of the aperture. The 
+            default is False, but could be np.nan or 0, for example. 
 
         Returns
         -------
         np.ndarray
             boolean array of the telescope aperture (1=transparent, 0=opaque).
         """
+        grid = np.zeros(shape, dtype=bool)
         center=0.
         if shape[0]%2==0: center=0.5
         x, y = np.meshgrid(*(np.arange(s)+center for s in shape))
         xc, yc = shape[0]/2, shape[1]/2
         rs = np.sqrt((x-xc)**2 + (y-yc)**2)
-        grid = rs < r
+        grid[rs < r] = True 
+        
+        if null_value is not None:
+            grid[~grid] = null_value
+        
         return grid
         
         
@@ -190,9 +210,13 @@ class WavefrontSensor:
         """
         # Pass the incoming wavefront through the PyWFS
         wavefront = self.pupil2pupils(wavefront)
-        return wavefront.intensity.shaped
+        signal = wavefront.intensity.shaped
+        # If the pyramid optic is rotated, rotate the signal to make it square
+        # again
+        if hasattr(self.pyramidOptic, 'rotated') and self.pyramidOptic.rotated:
+            signal = self.rotate(signal, crop=True)
+        return signal
     
-
 
     def split_quadrants(self, WFS_signal):
         """
@@ -211,25 +235,63 @@ class WavefrontSensor:
             Wavefront sensor pupil images ordered by quadrant.
 
         """
-        WFS_signal = WFS_signal.ravel()
-        assert WFS_signal.size == self.output_pupil_grid.x.size, \
-            "The input signal shape does not match the output pupil grid."
+        # ij indexing, 0,0 is bottom left of array
+        Q3 = WFS_signal[:self.N_elements, :self.N_elements]
+        Q4 = WFS_signal[:self.N_elements, 1+self.N_elements:]
+        Q1 = WFS_signal[1+self.N_elements:, 1+self.N_elements:]
+        Q2 = WFS_signal[1+self.N_elements:, :self.N_elements]
         
-        X, Y = self.output_pupil_grid.x, self.output_pupil_grid.y
-        # Create a boolean mask for the points in each quadrant
-        Q1_mask = (X>0) & (Y>0)
-        Q2_mask = (X<0) & (Y>0)
-        Q3_mask = (X<0) & (Y<0)
-        Q4_mask = (X>0) & (Y<0)
-        # Extract the points in the quadrant
-        Qs = []
-        for mask in [Q1_mask, Q2_mask, Q3_mask, Q4_mask]:
-            # Extract the image of the quadrant
-            Q = WFS_signal.ravel()[mask]
-            Q = np.reshape(Q, [self.N_elements, self.N_elements])
-            Qs.append(Q)
+        Qs = [Q1, Q2, Q3, Q4]
+        
+        # Check that the quadrants are the correct size
+        assert all(q.shape == (self.N_elements, self.N_elements) for q in Qs), \
+            "The quadrants are not the correct size."
             
         return Qs
+    
+    # .........................................................................
+    # This function is not used in the current implementation, but it is left 
+    # here for reference. It can be used to split the WFS signal into
+    # quadrants if needed in the future. There is a bug where is only works
+    # for certain number of elements (N_elements). It is more reliable than the 
+    # method above (easier to see what is going on).
+    # .........................................................................
+    # def split_quadrants(self, WFS_signal):
+    #     """
+    #     Splits the WFS signal (four pupil images in a single array) into 
+    #     Four individual arrays (one array per pupil image)
+
+    #     Parameters
+    #     ----------
+    #     WFS_signal : ndarray
+    #         The intensity image of the wavefront sensor. (the array of four
+    #         pupil images).
+
+    #     Returns
+    #     -------
+    #     Qs : list of ndarrays
+    #         Wavefront sensor pupil images ordered by quadrant.
+
+    #     """
+    #     WFS_signal = WFS_signal.ravel()
+    #     assert WFS_signal.size == self.output_pupil_grid.x.size, \
+    #         "The input signal shape does not match the output pupil grid."
+        
+    #     X, Y = self.output_pupil_grid.x, self.output_pupil_grid.y
+    #     # Create a boolean mask for the points in each quadrant
+    #     Q1_mask = (X>0) & (Y>0)
+    #     Q2_mask = (X<0) & (Y>0)
+    #     Q3_mask = (X<0) & (Y<0)
+    #     Q4_mask = (X>0) & (Y<0)
+    #     # Extract the points in the quadrant
+    #     Qs = []
+    #     for mask in [Q1_mask, Q2_mask, Q3_mask, Q4_mask]:
+    #         # Extract the image of the quadrant
+    #         Q = WFS_signal.ravel()[mask]
+    #         Q = np.reshape(Q, [self.N_elements, self.N_elements])
+    #         Qs.append(Q)
+            
+    #     return Qs
         
     
     

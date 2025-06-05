@@ -38,8 +38,8 @@ if __name__ == "__main__":
                         wavelength=WFS.wavelength)
     phase += Z.from_name('tilt y', WFE=WFE*WFS.telescope_diameter/2,
                         wavelength=WFS.wavelength)
-    # phase = wf.make_noise_pl(2, N_pupil_px, N_pupil_px, -4, WFS.N_elements**2).ravel()
-
+    # phase = aberrations.make_noise_pl(0.75, N_pupil_px, N_pupil_px, -5, WFS.N_elements**2).ravel()
+    # phase = hp.Field(phase.ravel(), WFS.input_pupil_grid)
     # Initialize the wavefront
     wavefront = WFS.flat_wavefront()
     # Apply the aberration to the wavefront

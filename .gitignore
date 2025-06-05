@@ -3,4 +3,5 @@
 *.html
 *.gif
 .vscode
+*.npy
 __pycache__

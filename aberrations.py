@@ -11,6 +11,7 @@ Created on Mon Mar 17 14:43 2025
 
 
 import hcipy as hp
+from hcipy.atmosphere import InfiniteAtmosphericLayer
 import numpy as np
 
 
@@ -68,7 +69,7 @@ class Zernike:
         self.D = D
 
 
-    def evaluate(self, n, m):
+    def evaluate(self, n=None, m=None):
         """
         Evaluates the Zernike polynomial on the grid.
 
@@ -85,6 +86,29 @@ class Zernike:
             The evaluated Zernike polynomial
         """
         return hp.mode_basis.zernike(n, m, D=self.D, grid=self.grid)
+    
+    
+    def evaluate_named(self, name):
+        """
+        Evaluates a Zernike polynomial by name. A list of common
+        Zernike modes is provided in the COMMON_MODES attribute.
+
+        Parameters
+        ----------
+        name : str
+            The name of the Zernike mode.
+
+        Returns
+        -------
+        hcipy.Field
+            The evaluated Zernike polynomial.
+        """
+        if name not in self.COMMON_MODES:
+            raise ValueError(f"Unknown Zernike mode: {name}")
+        
+        n, m = self.COMMON_MODES[name]
+        return self.evaluate(n, m)
+    
     
 
     def phase_delay(self, n, m, WFE, wavelength):
@@ -137,6 +161,70 @@ class Zernike:
         return self.phase_delay(n, m, WFE, wavelength)
 
     
+
+
+
+def make_keck_layers(input_grid, seeds=None):
+    '''Creates a multi-layer atmosphere for Keck Observatory.
+
+    The atmospheric parameters are based off of [Keck AO note 303]_.
+
+    .. [Keck AO note 303] https://www2.keck.hawaii.edu/optics/kpao/files/KAON/KAON303.pdf
+
+    Parameters
+    ----------
+    input_grid : Grid
+        The input grid of the atmospheric layers.
+
+    Returns
+    -------
+    list
+        A list of turbulence layers.
+    '''
+    heights = np.array([0, 2100, 4100, 6500, 9000, 12000, 14800])
+    velocities = np.array([6.7, 13.9, 20.8, 29.0, 29.0, 29.0, 29.0])
+    # velocities = np.array([0, 13.9, 20.8, 29.0, 29.0, 29.0, 29.0])
+    outer_scales = np.array([20, 20, 20, 20, 20, 20, 20])
+    Cn_squared = np.array([0.369, 0.219, 0.127, 0.101, 0.046, 0.111, 0.027]) * 1e-12
+    
+    if seeds is not None: assert len(seeds) == len(heights), "Number of seeds must match number of layers."
+    else: seeds = [None] * len(heights)
+    
+    layers = []
+    for h, v, cn, L0, s in zip(heights, velocities, Cn_squared, outer_scales, seeds):
+        layers.append(InfiniteAtmosphericLayer(input_grid, cn, L0, v, h, 2, seed=s))
+
+    return layers
+
+
+def make_unmoving_ground_layers(input_grid, seeds=None):
+    '''
+    Parameters
+    ----------
+    input_grid : Grid
+        The input grid of the atmospheric layers.
+
+    Returns
+    -------
+    list
+        A list of turbulence layers.
+    '''
+    heights = np.array([0, 2100, 4100, 6500, 9000, 12000, 14800])
+    # velocities = np.array([6.7, 13.9, 20.8, 29.0, 29.0, 29.0, 29.0])
+    velocities = np.array([0, 13.9, 20.8, 29.0, 29.0, 29.0, 29.0])
+    outer_scales = np.array([20, 20, 20, 20, 20, 20, 20])
+    Cn_squared = np.array([0.369, 0.219, 0.127, 0.101, 0.046, 0.111, 0.027]) * 1e-12
+    
+    if seeds is not None: assert len(seeds) == len(heights), "Number of seeds must match number of layers."
+    else: seeds = [None] * len(heights)
+    
+    layers = []
+    for h, v, cn, L0, s in zip(heights, velocities, Cn_squared, outer_scales, seeds):
+        layers.append(InfiniteAtmosphericLayer(input_grid, cn, L0, v, h, 2, seed=s))
+
+    return layers
+
+
 
 
 # =============================================================================
