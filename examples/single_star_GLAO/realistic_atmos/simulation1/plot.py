@@ -153,7 +153,8 @@ def plot_frames(tab):
         repeat_delay=100,
     )
     
-    ani.save('animation.html', writer='html', fps=5)
+    # ani.save('animation.html', writer='html', fps=5)
+    ani.save('animation.gif', writer='pillow', fps=15)
     return axs
 
 
