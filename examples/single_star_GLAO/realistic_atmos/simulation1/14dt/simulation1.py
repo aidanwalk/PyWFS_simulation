@@ -44,7 +44,7 @@ def make_atmospheres(N):
         print(f'Creating atmosphere layers for WFS {w+1} of {N_WFSs}...')
         # Seed the layers such that the ground layer is always the same,
         # but the upper layers are different.
-        layers = aberrations.make_keck_layers(WFS.input_pupil_grid, 
+        layers = aberrations.make_unmoving_ground_layers(WFS.input_pupil_grid, 
                                                   seeds=[2, *np.arange(20+(w*7), 20+(w*7)+6)])
         atmospheres.append(hp.atmosphere.MultiLayerAtmosphere(layers))
     return atmospheres
@@ -106,10 +106,10 @@ def compute_strehl(atmosphere, mean_phase):
 
 
 
-def save(frames, filename='frames.npy'):
+def save(animation_frames):
     """Save the animation frames to a file."""
     # Save the animation frames as a numpy array
-    np.save(filename, frames)
+    np.save('animation_frames.npy', animation_frames)
     return
     
 
@@ -182,9 +182,9 @@ def compute_ee50(atmosphere, mean_phase):
 # Total number of WFSs
 N_WFSs = 4
 # Fq of WFS (measurements per second)
-Hz = 100
+Hz = 1
 # simulation time step (number of steps per second)
-dt = 1 / 5 * 1/Hz
+dt = 1 / 14 * 1/Hz
 # Size of the pyramid optic
 py_size = 3/206265
 # Pyramid modulation radius in radians
@@ -208,9 +208,6 @@ if __name__ == "__main__":
     # Each WFS will have its own unique phase screens, but the ground layer
     # will be the same for all WFSs.
     atmospheres = make_atmospheres(N_WFSs)
-    off_axis_atmos = aberrations.make_keck_layers(WFS.input_pupil_grid, 
-                                                  seeds=[2, *np.arange(100, 106, dtype=int)])
-    off_axis_atmos = hp.atmosphere.MultiLayerAtmosphere(off_axis_atmos)
     # for i in range(len(atmospheres)):
     #     atmospheres[i].reset()
 
@@ -227,8 +224,7 @@ if __name__ == "__main__":
 
 
 
-    recovered_ground_layer = np.zeros((N_measurements, *WFS.signal_grid.shape))
-    average_ground_layer = np.zeros((N_measurements, *WFS.signal_grid.shape))
+    recovered_ground_layer = []
     time_steps = []
     errs = []
     uncorrected_strehl = []
@@ -248,21 +244,20 @@ if __name__ == "__main__":
         
         # Compute the mean phase over each WFS
         mean_phase = np.mean(recovered_phases, axis=0)
+        recovered_ground_layer.append(mean_phase)
         time_steps.append(step*dt)
         
         
         
         # Compute the average ground layer over the simulation so far
-        ground_layer = np.mean(ground_layers[0:step+1], axis=0)
+        ground_layer = np.mean(ground_layers, axis=0)
         # Zoom the ground layer to match the number of WFS elements
         ground_layer = zoom(ground_layer, WFS.N_elements / ground_layer.shape[0])
         ground_layer *= pupil_small
-        average_ground_layer[step] = ground_layer
         
         # Apply the WFS gain to the recovered phase
         mean_phase *= np.abs(ground_layer).max() / np.abs(mean_phase).max()
         mean_phase *= pupil_small
-        recovered_ground_layer[step] = mean_phase
         
         # Compute the error between the recovered phase and the ground layer
         err = np.std(mean_phase - ground_layer) / np.std(ground_layer)
@@ -271,8 +266,7 @@ if __name__ == "__main__":
         # Conpute the strehl ratio for this timestep
         big_mean_phase = zoom(mean_phase, WFS.input_pupil_grid.shape[0] / mean_phase.shape[0])
         # p_st, c_st, uc_st = compute_strehl(atmospheres[0], big_mean_phase)
-        off_axis_atmos.evolve_until(dt * step)
-        ee50, frames = compute_ee50(off_axis_atmos, big_mean_phase)
+        ee50, frames = compute_ee50(atmospheres[0], big_mean_phase)
         corrected_stehl.append(ee50[2])
         uncorrected_strehl.append(ee50[1])
         
@@ -281,9 +275,7 @@ if __name__ == "__main__":
         
     # %%
     # plot_frames(animation_frames)
-    save(animation_frames, filename='animation_frames.npy')
-    save(average_ground_layer, filename='average_ground_layer.npy')
-    save(recovered_ground_layer, filename='recovered_ground_layer.npy')
+    save(animation_frames)
         
         
     # %%

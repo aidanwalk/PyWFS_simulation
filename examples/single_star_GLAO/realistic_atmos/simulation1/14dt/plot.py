@@ -5,7 +5,7 @@ from astropy.io import fits
 import numpy as np
 from matplotlib import animation
 
-from examples.single_star_GLAO.realistic_atmos.simulation1.simulation1 import peak_location, dt, py_size
+from simulation1 import peak_location, dt, py_size
 
 
 
@@ -84,55 +84,30 @@ def make_ee_circle(image, r):
     
 def plot_frames(tab):
     animation_frames = np.load('animation_frames.npy')
-    recovered_ground_layer = np.load('recovered_ground_layer.npy')
-    average_ground_layer = np.load('average_ground_layer.npy')
     plate_scale = py_size * 206265 / animation_frames.shape[-1]
-
-    corrected = animation_frames[:,2]
-    uncorrected = animation_frames[:,1]
     
     plt.clf()
-    fig, axs = plt.subplots(2, 3, figsize=(13, 10))
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
     plt.suptitle(f'Simulation 1: t = {0.:.4f} seconds', fontsize=16)
     
-    axs[0][0].set_title('Ground Layer')
-    axs[0][1].set_title('Recovered Ground Layer')
-    axs[0][2].set_title('Ground - Recovered')
-    axs[1][0].set_title('Uncorrected Focus')
-    axs[1][0].set_title('Corrected Focus')
+    axs[0].set_title('Uncorrected Focus')
+    axs[1].set_title('Corrected Focus')
     
     
-    uc_circle = make_ee_circle(uncorrected[0], tab['uncorrected_ee50'][0])
-    cc_circle = make_ee_circle(corrected[0], tab['corrected_ee50'][0])
+    uc_circle = make_ee_circle(animation_frames[0][1], tab['uncorrected_ee50'][0])
+    cc_circle = make_ee_circle(animation_frames[0][2], tab['corrected_ee50'][0])
     circles = [uc_circle, cc_circle]
     
-    phase_frames = np.array([average_ground_layer, recovered_ground_layer, 
-                           average_ground_layer - recovered_ground_layer])
-
     # Initialize the plots
     pims = []
     anns = []
     maxs = []
-
-    for i, ax in enumerate(axs[0]):
-        # Get the image at timestep zero
-        im = phase_frames[i][0]
-        vmax = phase_frames[i].max()
-        vmin = phase_frames[i].min()
-        pim = ax.imshow(im, origin='lower', cmap='bone')
-        plt.colorbar(pim, ax=ax, fraction=0.046, pad=0.04)
-        pims.append(pim)
+    for i, ax in enumerate(axs):
         ax.axis('off')
-        pim.set_clim(vmin, vmax)
-
-    for i, ax in enumerate(axs[1][:2]):
-        ax.axis('off')
-
-        # Get the image at timestep zero
         im = animation_frames[0][i+1]
         vmax = animation_frames[0][i+1].max()
         vmin = animation_frames[0][i+1].min()
-        pim = ax.imshow(im+circles[i]*vmax*0.75, origin='lower', cmap='bone')
+        pim = axs[i].imshow(im+circles[i]*vmax*0.75, origin='lower', cmap='bone')
         plt.colorbar(pim, ax=ax, fraction=0.046, pad=0.04)
         
         ann = ax.annotate(f'EE50 = ____ arcsec', 
@@ -161,14 +136,10 @@ def plot_frames(tab):
         cc_circle = make_ee_circle(animation_frames[i][2], cc_ee50/plate_scale)
         circles = [uc_circle, cc_circle]
         
-        for j, ax in enumerate(axs[0]):
-            im = phase_frames[j][i]
-            pims[j].set_array(im)
-
-        for j, ax in enumerate(axs[1][:2]):
+        for j, ax in enumerate(axs):
             im = animation_frames[i][j+1]
-            pims[3+j].set_array(im+circles[j]*vmax*0.75)
-            pims[3+j].set_clim(0, vmax)
+            pims[j].set_array(im+circles[j]*vmax*0.75)
+            pims[j].set_clim(0, vmax)
         
         plt.suptitle(f'Simulation 1: t = {i*dt:.4f} seconds', fontsize=16)
         return pims
@@ -183,8 +154,8 @@ def plot_frames(tab):
         repeat_delay=100,
     )
     
-    ani.save('animation.html', writer='html', fps=15)
-    # ani.save('animation.gif', writer='pillow', fps=15)
+    ani.save('animation.html', writer='html', fps=5)
+    # ani.save('animation.gif', writer='pillow', fps=5)
     return axs
 
 
@@ -198,8 +169,8 @@ if __name__ == "__main__":
     tab = Table.read(f, format=format)
     
     
-    plot_error(tab, fname='simulation1.png')
-    plot_recovery()
-    plot_ee50(tab, plate_scale=py_size*206265/500)
+    # plot_error(tab, fname='simulation1.png')
+    # plot_recovery()
+    # plot_ee50(tab, plate_scale=py_size*206265/500)
     plot_frames(tab)
     

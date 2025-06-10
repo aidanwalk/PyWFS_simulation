@@ -7,11 +7,9 @@ from matplotlib import animation
 from scipy.ndimage import zoom
 # import simulation modules
 import sys
-sys.path.append('/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/')
+sys.path.append('C:/Users/perfo/Desktop/School/gradschool/699_1/PyWFS_simulation')
 from ModulatedPyWFS import ModulatedWavefrontSensor
 import aberrations
-
-
 
 def plot_layers(images):
     # plt.figure('layers', figsize=(10, 10), tight_layout=True)
@@ -77,7 +75,7 @@ if __name__ == "__main__":
     
     
     print('Creating Keck atmosphere layers')
-    layers = aberrations.make_keck_layers(WFS.input_pupil_grid, seeds=range(1, 8))
+    layers = aberrations.make_keck_layers(WFS.input_pupil_grid, seeds=[2, *range(20, 26)])
     atmosphere = hp.atmosphere.MultiLayerAtmosphere(layers)
     
     # Propagate the wavefront through the atmosphere

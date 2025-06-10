@@ -183,7 +183,6 @@ def make_keck_layers(input_grid, seeds=None):
     '''
     heights = np.array([0, 2100, 4100, 6500, 9000, 12000, 14800])
     velocities = np.array([6.7, 13.9, 20.8, 29.0, 29.0, 29.0, 29.0])
-    # velocities = np.array([0, 13.9, 20.8, 29.0, 29.0, 29.0, 29.0])
     outer_scales = np.array([20, 20, 20, 20, 20, 20, 20])
     Cn_squared = np.array([0.369, 0.219, 0.127, 0.101, 0.046, 0.111, 0.027]) * 1e-12
     

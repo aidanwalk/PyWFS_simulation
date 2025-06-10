@@ -10,7 +10,7 @@ from scipy.ndimage import zoom
 # import simulation modules
 import sys
 sys.path.append('C:/Users/perfo/Desktop/School/gradschool/699_1/PyWFS_simulation')
-from reconstruct import interaction_matrix
+from reconstruct import interaction_matrix, zernike_decomposition
 from ModulatedPyWFS import ModulatedWavefrontSensor
 import aberrations
 
@@ -19,6 +19,7 @@ import aberrations
 
 from photutils.profiles import CurveOfGrowth
 
+# %%
 
 def get_phases(start, end):
     phases = []
@@ -143,6 +144,23 @@ def compute_ee50(atmosphere, mean_phase):
     """Compute the encircled energy at 50% for two cases: 
         1. uncorrected (just the atmosphere unaltered)
         2. corrected (mean_phase is removed from the atmosphere ground layer)
+
+    parameters
+    ----------
+    atmosphere : hp.atmosphere.MultiLayerAtmosphere
+        The atmosphere to use for the simulation.
+    mean_phase : np.ndarray
+        The mean phase recovered by the WFS. The negative of the mean phase will 
+        be applied to the incoming wavefront to simulate a DM correction. 
+
+    returns
+    -------
+    values : list
+        A list of the encircled energy at 50% for the three cases: 
+        [perfect, uncorrected, corrected wavefronts]
+    frames : list
+        A list of the focal plane images for the three cases: 
+        [perfect, uncorrected, corrected wavefronts]
     """
     flat_wavefront = WFS.flat_wavefront()
     fp_perfect = WFS.pupil2image(flat_wavefront).intensity.shaped
@@ -180,7 +198,7 @@ def compute_ee50(atmosphere, mean_phase):
 # SIMULATION PARAMETERS -- CHANGE ME
 # -------------------------------------------------------------------------
 # Total number of WFSs
-N_WFSs = 4
+N_WFSs = 1
 # Fq of WFS (measurements per second)
 Hz = 100
 # simulation time step (number of steps per second)
@@ -189,6 +207,8 @@ dt = 1 / 5 * 1/Hz
 py_size = 3/206265
 # Pyramid modulation radius in radians
 modulation_radius = 0.5/206265 # radians
+# Number of Zernike modes to use in the modal decomposition
+N_modes = 10
 # -------------------------------------------------------------------------
 
 # Total number of simulation steps
@@ -200,8 +220,9 @@ if __name__ == "__main__":
     # %% [Create atmosphere and WFS]
 
     # Init the WFS and interaction matrix
-    WFS = ModulatedWavefrontSensor(focal_extent=py_size)
+    WFS = ModulatedWavefrontSensor(focal_extent=py_size, N_elements=36,)
     imat = interaction_matrix(N=WFS.N_elements)
+    Z_decomp = zernike_decomposition(N_modes, WFS.signal_grid, WFS.telescope_diameter, starting_mode=1)
 
 
     # Make an atmospheric model for each WFS
@@ -238,8 +259,15 @@ if __name__ == "__main__":
         # FOR EACH WFS
         recovered_phases = []
         for i in range(N_WFSs):
-            recovered_phase = simulate_this_WFS(i, step, atmospheres, WFS)
-            recovered_phases.append(recovered_phase)
+            zonal_phase = simulate_this_WFS(i, step, atmospheres, WFS)
+
+            # Perform a modal decomposition on the recovered phase
+            coeffs = Z_decomp.decompose(zonal_phase.flatten())
+            # Reconstruct the phase just based on the Zernike decomposition
+            projection = Z_decomp.project(coeffs).shaped
+            
+            # Append the zernike projected phase to the recovered phases
+            recovered_phases.append(projection)
             
             if i == 0:
                 # Save the ground layer for this timestep
@@ -268,7 +296,8 @@ if __name__ == "__main__":
         err = np.std(mean_phase - ground_layer) / np.std(ground_layer)
         errs.append(err)
         
-        # Conpute the strehl ratio for this timestep
+        # Conpute the strehl ratio for this timestep (actually use 50% encircled energy, since 
+        # stehl only really works well for small phase errors)
         big_mean_phase = zoom(mean_phase, WFS.input_pupil_grid.shape[0] / mean_phase.shape[0])
         # p_st, c_st, uc_st = compute_strehl(atmospheres[0], big_mean_phase)
         off_axis_atmos.evolve_until(dt * step)
@@ -290,11 +319,12 @@ if __name__ == "__main__":
     # Write out the results to a file
     tab = Table([time_steps, errs, uncorrected_strehl, corrected_stehl],
                 names=['num_screens', 'error', 'uncorrected_ee50', 'corrected_ee50']) 
-    tab.write('simulation1.txt', format='ascii.fixed_width', overwrite=True)
+    tab.write('simulation2.txt', format='ascii.fixed_width', overwrite=True)
 
     # save the final recovered phase
     fits.writeto('final_recovered_phase.fits', mean_phase, overwrite=True)
     # Save the zoomed common phase
     fits.writeto('common_phase_zoomed.fits', ground_layer, overwrite=True)
         
+    
         
