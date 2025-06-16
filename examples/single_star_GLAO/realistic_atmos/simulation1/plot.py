@@ -5,7 +5,9 @@ from astropy.io import fits
 import numpy as np
 from matplotlib import animation
 
-from examples.single_star_GLAO.realistic_atmos.simulation1.simulation1 import peak_location, dt, py_size
+import sys
+sys.path.append('C:/Users/perfo/Desktop/School/gradschool/699_1/PyWFS_simulation')
+from simulation1 import peak_location, dt, py_size
 
 
 
@@ -28,7 +30,7 @@ def plot_recovery():
     common_phase = fits.getdata('common_phase_zoomed.fits')
     
     plt.figure(figsize=(8,3), tight_layout=True)
-    plt.suptitle('Simulation 1')
+    plt.suptitle('Simulation 2')
     
     plt.subplot(131)
     plt.title('Common Phase')
@@ -86,6 +88,8 @@ def plot_frames(tab):
     animation_frames = np.load('animation_frames.npy')
     recovered_ground_layer = np.load('recovered_ground_layer.npy')
     average_ground_layer = np.load('average_ground_layer.npy')
+    integrated_phase = np.load('integrated_layer.npy')
+    integrated_phase_off_axis = np.load('integrated_layer_off_ax.npy')
     plate_scale = py_size * 206265 / animation_frames.shape[-1]
 
     corrected = animation_frames[:,2]
@@ -97,9 +101,10 @@ def plot_frames(tab):
     
     axs[0][0].set_title('Ground Layer')
     axs[0][1].set_title('Recovered Ground Layer')
-    axs[0][2].set_title('Ground - Recovered')
+    axs[0][2].set_title('Integrated Atmos')
     axs[1][0].set_title('Uncorrected Focus')
-    axs[1][0].set_title('Corrected Focus')
+    axs[1][1].set_title('Corrected Focus')
+    axs[1][2].set_title('Integrated Off-axis Atmos')
     
     
     uc_circle = make_ee_circle(uncorrected[0], tab['uncorrected_ee50'][0])
@@ -107,7 +112,7 @@ def plot_frames(tab):
     circles = [uc_circle, cc_circle]
     
     phase_frames = np.array([average_ground_layer, recovered_ground_layer, 
-                           average_ground_layer - recovered_ground_layer])
+                           integrated_phase])
 
     # Initialize the plots
     pims = []
@@ -125,8 +130,17 @@ def plot_frames(tab):
         ax.axis('off')
         pim.set_clim(vmin, vmax)
 
-    for i, ax in enumerate(axs[1][:2]):
+    for i, ax in enumerate(axs[1]):
         ax.axis('off')
+        if i == 2:
+            im = integrated_phase_off_axis[0]
+            vmax = integrated_phase_off_axis.max()
+            vmin = integrated_phase_off_axis.min()
+            pim = ax.imshow(im, origin='lower', cmap='bone')
+            plt.colorbar(pim, ax=ax, fraction=0.046, pad=0.04)
+            pim.set_clim(vmin, vmax)
+            pims.append(pim)
+            continue
 
         # Get the image at timestep zero
         im = animation_frames[0][i+1]
@@ -165,10 +179,15 @@ def plot_frames(tab):
             im = phase_frames[j][i]
             pims[j].set_array(im)
 
-        for j, ax in enumerate(axs[1][:2]):
+        for j, ax in enumerate(axs[1]):
+            if j == 2:
+                im = integrated_phase_off_axis[i]
+                pims[3+j].set_array(im)
+                continue
+
             im = animation_frames[i][j+1]
             pims[3+j].set_array(im+circles[j]*vmax*0.75)
-            pims[3+j].set_clim(0, vmax)
+            # pims[3+j].set_clim(0, vmax)
         
         plt.suptitle(f'Simulation 1: t = {i*dt:.4f} seconds', fontsize=16)
         return pims
@@ -203,3 +222,4 @@ if __name__ == "__main__":
     plot_ee50(tab, plate_scale=py_size*206265/500)
     plot_frames(tab)
     
+

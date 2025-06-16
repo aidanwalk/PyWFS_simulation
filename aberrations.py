@@ -224,6 +224,34 @@ def make_unmoving_ground_layers(input_grid, seeds=None):
     return layers
 
 
+def make_two_layer_chun(input_grid, seeds=None):
+    """
+    Makes a multi-layer atmosphere consistent with Chun et al. (2008) [1]_.
+    [1] Chun, M., et al. (2008). "Mauna Kea Ground Layer Characterization Campaign."
+        doi:10.1111/j.1365-2966.2008.14346.x
+
+    The ground layer strength is the integrated 75 percentile turbulence from 0 - 640 meters.
+    The Free atmosphere (FA) is the 75 percentile FA from [1].
+
+    """
+    # Parameters from Table 6. 
+    heights    = np.array([  0.,    15.,   30.,    45.,   120.,   200.,    280.,    360.,    440.,    520., 600.,  5000.])
+    Cn_squared = np.array([0.14, 0.0856, 0.021, 0.0103, 0.0243, 0.0101, 0.00901, 0.00691, 0.00497, 0.00167, 0.00, 0.0937]) * 1e-12
+
+    # Median ground windspeed at the summit of Maunakea is 7 m/s.
+    velocities = np.array([7, 29])
+    # Find the integrated Cn^2 for the ground layer and free atmosphere
+    Cn_layer1 = np.sum(Cn_squared[heights <= 640])  
+    Cn_layer2 = np.sum(Cn_squared[heights > 640])
+
+    if seeds is not None: assert len(seeds) == len(velocities), "Number of seeds must match number of layers."
+    else: seeds = [None] * len(heights)
+
+    layers = []
+    for h, v, cn, s in zip(heights, velocities, [Cn_layer1, Cn_layer2], seeds):
+        layers.append(InfiniteAtmosphericLayer(input_grid, cn, L0=20, velocity=v, height=h, seed=s))
+
+    return layers
 
 
 # =============================================================================

@@ -11,7 +11,7 @@ sys.path.append('C:/Users/perfo/Desktop/School/gradschool/699_1/PyWFS_simulation
 from ModulatedPyWFS import ModulatedWavefrontSensor
 import aberrations
 
-def plot_layers(images):
+def plot_7_layers(images):
     # plt.figure('layers', figsize=(10, 10), tight_layout=True)
     fig, axs = plt.subplots(3, 3, figsize=(10, 9), tight_layout=True)
     # plt.clf()
@@ -54,9 +54,58 @@ def plot_layers(images):
                                 blit=True,
                                 frames=len(images),
                                 repeat_delay=100,
-                            )
+                                )
     
     ani.save('animation.gif', writer='pillow', fps=5)
+    return axs
+
+
+
+
+def plot_2_layers(images, fname='atmosphere.gif'):
+    # plt.figure('layers', figsize=(10, 10), tight_layout=True)
+    fig, axs = plt.subplots(1, 2, figsize=(10, 6), tight_layout=True)
+    axs[0].set_title('Ground Layer')
+    axs[1].set_title('Free Atmosphere')
+    # plt.clf()
+    
+    # Find the min and max values of every layer over any time step
+    maxs, mins = [], []
+    for layer_idx in range(images.shape[1]):
+        maxs.append(np.max(images[:, layer_idx]))
+        mins.append(np.min(images[:, layer_idx]))
+        
+    
+    plt.suptitle('Maunakea Atmosphere — '+f'time: {0} seconds', fontsize=16)
+    pims = []
+    for i, layer in enumerate(images[0]):
+        ax = axs[i]
+        # phase = layer.phase_for(WFS.wavelength).shaped
+        im = ax.imshow(layer, cmap='bone', origin='lower', vmin=mins[i], vmax=maxs[i])
+        ax.set_title(f'Layer {i+1}: Height = {layers[i].height} m')
+        plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        ax.axis('off')
+        pims.append(im)
+        
+        
+    def animate(i):
+        for j, layer in enumerate(images[i]):
+            # ax = axs[j // 3, j % 3]
+            pims[j].set_array(layer)
+            plt.suptitle('Maunakea Atmosphere — '+f'time: {i*dt:.2f} seconds', fontsize=16)
+            
+        return pims
+        
+    ani = animation.FuncAnimation(
+                                fig,
+                                animate,
+                                interval=120,
+                                blit=True,
+                                frames=len(images),
+                                repeat_delay=100,
+                                )
+    
+    ani.save(fname, writer='pillow', fps=5)
     return axs
 
 
@@ -75,7 +124,7 @@ if __name__ == "__main__":
     
     
     print('Creating Keck atmosphere layers')
-    layers = aberrations.make_keck_layers(WFS.input_pupil_grid, seeds=[2, *range(20, 26)])
+    layers = aberrations.make_two_layer_chun(WFS.input_pupil_grid, seeds=[2, 3])
     atmosphere = hp.atmosphere.MultiLayerAtmosphere(layers)
     
     # Propagate the wavefront through the atmosphere
@@ -115,7 +164,8 @@ if __name__ == "__main__":
     # %%
     print('Making animation')
     ims = np.array(ims)
-    plot_layers(ims)
+    # plot_7_layers(ims)
+    plot_2_layers(ims, fname='maunakea_atmosphere.gif')
         
     
     

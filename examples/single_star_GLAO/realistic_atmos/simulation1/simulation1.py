@@ -1,3 +1,18 @@
+"""
+This simulation uses a single modulated pyramid WFS to measure the wavefront
+aberrations in a realistic atmosphere. The simulation uses a two-layer atmosphere
+model after Chun et al. (2008) (Maunakea ground layer characterization campaign).
+
+The WFS works mimicing the LBT ESM mode. The single WFS fits 10 Zernike modes
+to reconstruct the wavefront phase. 
+An "off axis" atmosphere is used to compute the encircled energy of the corrected
+wavefront. The off axis atmosphere has the same ground layer as the main
+atmosphere, but a different upper layer. This is to simulate the effect of
+observing a target at an angle, where the atmosphere may have different properties.
+"""
+
+
+
 import numpy as np
 import hcipy as hp
 from tqdm import tqdm
@@ -10,7 +25,7 @@ from scipy.ndimage import zoom
 # import simulation modules
 import sys
 sys.path.append('C:/Users/perfo/Desktop/School/gradschool/699_1/PyWFS_simulation')
-from reconstruct import interaction_matrix
+from reconstruct import interaction_matrix, zernike_decomposition
 from ModulatedPyWFS import ModulatedWavefrontSensor
 import aberrations
 
@@ -19,6 +34,7 @@ import aberrations
 
 from photutils.profiles import CurveOfGrowth
 
+# %%
 
 def get_phases(start, end):
     phases = []
@@ -37,15 +53,16 @@ def get_phase(index):
 
 
 
-def make_atmospheres(N):
+def make_atmospheres(N, seeds=None):
     atmospheres = []
     for w in range(N):
         # Create a layer for this atmosphere
         print(f'Creating atmosphere layers for WFS {w+1} of {N_WFSs}...')
         # Seed the layers such that the ground layer is always the same,
         # but the upper layers are different.
-        layers = aberrations.make_keck_layers(WFS.input_pupil_grid, 
-                                                  seeds=[2, *np.arange(20+(w*7), 20+(w*7)+6)])
+        # layers = aberrations.make_keck_layers(WFS.input_pupil_grid, 
+        #                                           seeds=[2, *np.arange(20+(w*7), 20+(w*7)+6)])
+        layers = aberrations.make_two_layer_chun(WFS.input_pupil_grid, seeds=[seeds[0], seeds[1]+w])
         atmospheres.append(hp.atmosphere.MultiLayerAtmosphere(layers))
     return atmospheres
 
@@ -116,12 +133,12 @@ def save(frames, filename='frames.npy'):
 
 def peak_location(image):
     """Find the peak location in the image."""
-    # maxloc = np.where(image == np.max(image))
-    # xc = maxloc[1][0]
-    # yc = maxloc[0][0]
+    maxloc = np.where(image == np.max(image))
+    xc = maxloc[1][0]
+    yc = maxloc[0][0]
     
-    xc = image.shape[0] // 2
-    yc = image.shape[1] // 2
+    # xc = image.shape[0] // 2
+    # yc = image.shape[1] // 2
     
     return xc, yc
 
@@ -143,6 +160,23 @@ def compute_ee50(atmosphere, mean_phase):
     """Compute the encircled energy at 50% for two cases: 
         1. uncorrected (just the atmosphere unaltered)
         2. corrected (mean_phase is removed from the atmosphere ground layer)
+
+    parameters
+    ----------
+    atmosphere : hp.atmosphere.MultiLayerAtmosphere
+        The atmosphere to use for the simulation.
+    mean_phase : np.ndarray
+        The mean phase recovered by the WFS. The negative of the mean phase will 
+        be applied to the incoming wavefront to simulate a DM correction. 
+
+    returns
+    -------
+    values : list
+        A list of the encircled energy at 50% for the three cases: 
+        [perfect, uncorrected, corrected wavefronts]
+    frames : list
+        A list of the focal plane images for the three cases: 
+        [perfect, uncorrected, corrected wavefronts]
     """
     flat_wavefront = WFS.flat_wavefront()
     fp_perfect = WFS.pupil2image(flat_wavefront).intensity.shaped
@@ -184,7 +218,7 @@ N_WFSs = 4
 # Fq of WFS (measurements per second)
 Hz = 100
 # simulation time step (number of steps per second)
-dt = 1 / 5 * 1/Hz
+dt = 1 / 10 * 1/Hz
 # Size of the pyramid optic
 py_size = 3/206265
 # Pyramid modulation radius in radians
@@ -200,19 +234,17 @@ if __name__ == "__main__":
     # %% [Create atmosphere and WFS]
 
     # Init the WFS and interaction matrix
-    WFS = ModulatedWavefrontSensor(focal_extent=py_size)
+    WFS = ModulatedWavefrontSensor(focal_extent=py_size, N_elements=36,)
     imat = interaction_matrix(N=WFS.N_elements)
 
 
     # Make an atmospheric model for each WFS
     # Each WFS will have its own unique phase screens, but the ground layer
     # will be the same for all WFSs.
-    atmospheres = make_atmospheres(N_WFSs)
-    off_axis_atmos = aberrations.make_keck_layers(WFS.input_pupil_grid, 
-                                                  seeds=[2, *np.arange(100, 106, dtype=int)])
+    atmospheres = make_atmospheres(N_WFSs, seeds=[2, 20])
+    off_axis_atmos = aberrations.make_two_layer_chun(WFS.input_pupil_grid, 
+                                                     seeds=[2, 200])
     off_axis_atmos = hp.atmosphere.MultiLayerAtmosphere(off_axis_atmos)
-    # for i in range(len(atmospheres)):
-    #     atmospheres[i].reset()
 
     # %% [Simulation Loop]
 
@@ -229,6 +261,8 @@ if __name__ == "__main__":
 
     recovered_ground_layer = np.zeros((N_measurements, *WFS.signal_grid.shape))
     average_ground_layer = np.zeros((N_measurements, *WFS.signal_grid.shape))
+    integrated_layer = np.zeros((N_measurements, *WFS.signal_grid.shape))
+    integrated_layer_off_ax = np.zeros((N_measurements, *WFS.signal_grid.shape))
     time_steps = []
     errs = []
     uncorrected_strehl = []
@@ -238,8 +272,10 @@ if __name__ == "__main__":
         # FOR EACH WFS
         recovered_phases = []
         for i in range(N_WFSs):
-            recovered_phase = simulate_this_WFS(i, step, atmospheres, WFS)
-            recovered_phases.append(recovered_phase)
+            zonal_phase = simulate_this_WFS(i, step, atmospheres, WFS)
+
+            # Append the zernike projected phase to the recovered phases
+            recovered_phases.append(zonal_phase)
             
             if i == 0:
                 # Save the ground layer for this timestep
@@ -252,6 +288,7 @@ if __name__ == "__main__":
         
         
         
+
         # Compute the average ground layer over the simulation so far
         ground_layer = np.mean(ground_layers[0:step+1], axis=0)
         # Zoom the ground layer to match the number of WFS elements
@@ -264,28 +301,44 @@ if __name__ == "__main__":
         mean_phase *= pupil_small
         recovered_ground_layer[step] = mean_phase
         
+
+        integrated_phase = atmospheres[0].phase_for(WFS.wavelength).shaped
+        integrated_phase = zoom(integrated_phase, WFS.N_elements / integrated_phase.shape[0])
+        integrated_phase *= pupil_small
+        integrated_layer[step] = integrated_phase
+
+
+        integrated_phase_off_ax = off_axis_atmos.phase_for(WFS.wavelength).shaped
+        integrated_phase_off_ax = zoom(integrated_phase_off_ax, WFS.N_elements / integrated_phase_off_ax.shape[0])
+        integrated_phase_off_ax *= pupil_small
+        integrated_layer_off_ax[step] = integrated_phase_off_ax
+
+
         # Compute the error between the recovered phase and the ground layer
         err = np.std(mean_phase - ground_layer) / np.std(ground_layer)
         errs.append(err)
         
-        # Conpute the strehl ratio for this timestep
+        # Conpute the strehl ratio for this timestep (actually use 50% encircled energy, since 
+        # stehl only really works well for small phase errors)
         big_mean_phase = zoom(mean_phase, WFS.input_pupil_grid.shape[0] / mean_phase.shape[0])
         # p_st, c_st, uc_st = compute_strehl(atmospheres[0], big_mean_phase)
+        # Evolve the off axis atmosphere as if you were to apply the DM correction 
+        # at the next WFS integration step
         off_axis_atmos.evolve_until(dt * step)
         ee50, frames = compute_ee50(off_axis_atmos, big_mean_phase)
         corrected_stehl.append(ee50[2])
         uncorrected_strehl.append(ee50[1])
         
         animation_frames[step] = frames
-        
-        
+
     # %%
     # plot_frames(animation_frames)
     save(animation_frames, filename='animation_frames.npy')
     save(average_ground_layer, filename='average_ground_layer.npy')
     save(recovered_ground_layer, filename='recovered_ground_layer.npy')
-        
-        
+    save(integrated_layer, filename='integrated_layer.npy')
+    save(integrated_layer_off_ax, filename='integrated_layer_off_ax.npy')
+
     # %%
     # Write out the results to a file
     tab = Table([time_steps, errs, uncorrected_strehl, corrected_stehl],
@@ -297,4 +350,5 @@ if __name__ == "__main__":
     # Save the zoomed common phase
     fits.writeto('common_phase_zoomed.fits', ground_layer, overwrite=True)
         
+    
         
