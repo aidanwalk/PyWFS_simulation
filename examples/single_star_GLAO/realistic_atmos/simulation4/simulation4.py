@@ -29,6 +29,8 @@ sys.path.append('/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/')
 from reconstruct import interaction_matrix, zernike_decomposition
 from ModulatedPyWFS import ModulatedWavefrontSensor
 import aberrations
+import stars
+from pyramid_array_optic import PyramidArrayOptic
 
 # sys.path.append('/home/arcadia/mysoft/gradschool/useful/code_fragments/strehlometer/')
 # import strehl
@@ -56,34 +58,33 @@ def get_phase(index):
 
 def make_atmospheres(N, seeds=None):
     atmospheres = []
-    for w in range(N):
+    for w in tqdm(range(N)):
         # Create a layer for this atmosphere
-        print(f'Creating atmosphere layers for WFS {w+1} of {N_WFSs}...')
         # Seed the layers such that the ground layer is always the same,
         # but the upper layers are different.
         # layers = aberrations.make_keck_layers(WFS.input_pupil_grid, 
         #                                           seeds=[2, *np.arange(20+(w*7), 20+(w*7)+6)])
-        layers = aberrations.make_two_layer_chun(WFS.input_pupil_grid, seeds=seeds)
+        layers = aberrations.make_two_layer_chun(WFS.input_pupil_grid, seeds=[seeds[0], seeds[1]+w])
         atmospheres.append(hp.atmosphere.MultiLayerAtmosphere(layers))
     return atmospheres
 
 
 
-def simulate_this_WFS(wfs_index, step, atmospheres, WFS):
+def simulate_this_WFS(star_index, step, atmospheres, WFS):
     # Advance the atmosphere for this timestep and WFS
-    atmospheres[wfs_index].evolve_until(dt * step)
-    atmospheres[wfs_index].layers[0] = atmospheres[0].layers[0]  # Keep the ground layer the same for all WFSs
+    atmospheres[star_index].evolve_until(dt * step)
+    atmospheres[star_index].layers[0] = atmospheres[0].layers[0]  # Keep the ground layer the same for all WFSs
     
     # Create a new wavefront 
     wavefront = WFS.flat_wavefront()
     # Pass the wavefront through the atmosphere
-    wavefront = atmospheres[wfs_index].forward(wavefront)
+    wavefront = atmospheres[star_index].forward(wavefront)
     
     # Simulate the WFS signal and add it to the WFS signal integration
-    signals[wfs_index] += WFS.modulate(wavefront, radius=modulation_radius,
+    signals += WFS.modulate(wavefront, radius=modulation_radius,
                                 num_steps = 12)
     # Compute the WFS slopes
-    slopes = WFS.measure_slopes(signals[wfs_index]) 
+    slopes = WFS.measure_slopes(signals[star_index]) 
     # Recover the wavefront phase
     recovered_phase = imat.slope2phase(*slopes)
     
@@ -134,12 +135,12 @@ def save(frames, filename='frames.npy'):
 
 def peak_location(image):
     """Find the peak location in the image."""
-    maxloc = np.where(image == np.max(image))
-    xc = maxloc[1][0]
-    yc = maxloc[0][0]
+    # maxloc = np.where(image == np.max(image))
+    # xc = maxloc[1][0]
+    # yc = maxloc[0][0]
     
-    # xc = image.shape[0] // 2
-    # yc = image.shape[1] // 2
+    xc = image.shape[0] // 2
+    yc = image.shape[1] // 2
     
     return xc, yc
 
@@ -214,22 +215,24 @@ def compute_ee50(atmosphere, mean_phase):
 # -------------------------------------------------------------------------
 # SIMULATION PARAMETERS -- CHANGE ME
 # -------------------------------------------------------------------------
-# Total number of WFSs
-N_WFSs = 1
+# number of pyramids across one dimension in the array
+N_pyramids = 3
+# Number of unique phase screens
+N_stars = 2**7
+# Size of the pyramid optic
+py_size = 0.75/206265
+# Number of elements across the WFS
+N_elements = 36
 # Fq of WFS (measurements per second)
 Hz = 25
 # simulation time step (number of steps per second)
-dt = 1 / 100 * 1/Hz
-# Size of the pyramid optic
-py_size = 3/206265
-# Pyramid modulation radius in radians
-modulation_radius = 0.5/206265 # radians
-# Number of Zernike modes to use in the modal decomposition
-N_modes = 10
+dt = 1 / 50 * 1/Hz
 # -------------------------------------------------------------------------
+
 
 # Total number of simulation steps
 N_measurements = int(Hz**-1 / dt)
+
 
 
 if __name__ == "__main__":
@@ -237,30 +240,40 @@ if __name__ == "__main__":
     # %% [Create atmosphere and WFS]
 
     # Init the WFS and interaction matrix
-    WFS = ModulatedWavefrontSensor(focal_extent=py_size, N_elements=36,)
+    WFS = ModulatedWavefrontSensor(pyramidOptic=PyramidArrayOptic, 
+                                   focal_extent=py_size*N_pyramids, 
+                                   N_elements=36,
+                                   py_kwargs={'N_pyramids': N_pyramids},
+                                   )
     imat = interaction_matrix(N=WFS.N_elements)
-    Z_decomp = zernike_decomposition(N_modes, WFS.signal_grid, WFS.telescope_diameter, starting_mode=1)
 
 
     # Make an atmospheric model for each WFS
     # Each WFS will have its own unique phase screens, but the ground layer
     # will be the same for all WFSs.
-    atmospheres = make_atmospheres(N_WFSs, seeds=[2, 20])
+    atmospheres = make_atmospheres(N_stars, seeds=[2, 20])
     off_axis_atmos = aberrations.make_two_layer_chun(WFS.input_pupil_grid, 
                                                      seeds=[2, 200])
     off_axis_atmos = hp.atmosphere.MultiLayerAtmosphere(off_axis_atmos)
 
     # %% [Simulation Loop]
 
+    for atmosphere in atmospheres:
+        # reset the atmosphere to the initial state
+        atmosphere.reset()
+    off_axis_atmos.reset()
+    
     # Create a circular aperture in WFS signal grid units
     pupil_small = WFS.circular_aperture(WFS.signal_grid.shape, WFS.signal_grid.shape[0]/ 2)
 
 
     # Init an array to store the WFS intensity signals
-    signals = np.zeros((N_WFSs, *WFS.output_pupil_grid.shape))
+    signals = np.zeros(WFS.output_pupil_grid.shape)
     # And the ground layer image at each time step
     ground_layers = np.zeros((N_measurements, *WFS.input_pupil_grid.shape))
-
+    
+    # Create the positions of stars on the pyramid
+    positions = stars.random_radius(WFS.focal_extent*206265, N_points=N_stars) / 206265
 
 
     recovered_ground_layer = np.zeros((N_measurements, *WFS.signal_grid.shape))
@@ -273,23 +286,35 @@ if __name__ == "__main__":
     corrected_stehl = []
     animation_frames = np.zeros((N_measurements, 3, *WFS.focal_grid.shape))
     for step in tqdm(range(N_measurements)):
-        # FOR EACH WFS
+        
         recovered_phases = []
-        for i in range(N_WFSs):
-            zonal_phase = simulate_this_WFS(i, step, atmospheres, WFS)
-
-            # Perform a modal decomposition on the recovered phase
-            coeffs = Z_decomp.decompose(zonal_phase.flatten())
-            # Reconstruct the phase just based on the Zernike decomposition
-            projection = Z_decomp.project(coeffs).shaped
+        for i in range(N_stars):
+            # Advance the atmosphere for this timestep and WFS
+            atmospheres[i].evolve_until(dt * step)
+            atmospheres[i].layers[0] = atmospheres[0].layers[0]  # Keep the ground layer the same for all WFSs
             
-            # Append the zernike projected phase to the recovered phases
-            recovered_phases.append(projection)
+            # Create a new wavefront 
+            wavefront = WFS.flat_wavefront()
+            # Pass the wavefront through the atmosphere
+            wavefront = atmospheres[i].forward(wavefront)
+            
+            # Simulate the WFS signal and add it to the WFS signal integration
+            signals += WFS.discrete_modulation(wavefront, [positions[i]])
             
             if i == 0:
                 # Save the ground layer for this timestep
                 ground_layers[step] = atmospheres[i].layers[0].phase_for(WFS.wavelength).shaped
         
+            
+        # Compute the WFS slopes
+        slopes = WFS.measure_slopes(signals) 
+        # Recover the wavefront phase
+        recovered_phase = imat.slope2phase(*slopes)
+        # Derotate the recovered phase to account for the pyramid optic rotation
+        recovered_phase = WFS.rotate(recovered_phase, angle=-45)
+        # Append the zernike projected phase to the recovered phases
+        recovered_phases.append(recovered_phase)
+            
         
         # Compute the mean phase over each WFS
         mean_phase = np.mean(recovered_phases, axis=0)
@@ -310,13 +335,13 @@ if __name__ == "__main__":
         mean_phase *= pupil_small
         recovered_ground_layer[step] = mean_phase
         
-
+        # Obtain the integrated phase for star 0
         integrated_phase = atmospheres[0].phase_for(WFS.wavelength).shaped
         integrated_phase = zoom(integrated_phase, WFS.N_elements / integrated_phase.shape[0])
         integrated_phase *= pupil_small
         integrated_layer[step] = integrated_phase
 
-
+        # Obtain the integrated phase for the off-axis atmosphere
         integrated_phase_off_ax = off_axis_atmos.phase_for(WFS.wavelength).shaped
         integrated_phase_off_ax = zoom(integrated_phase_off_ax, WFS.N_elements / integrated_phase_off_ax.shape[0])
         integrated_phase_off_ax *= pupil_small
@@ -352,7 +377,7 @@ if __name__ == "__main__":
     # Write out the results to a file
     tab = Table([time_steps, errs, uncorrected_strehl, corrected_stehl],
                 names=['num_screens', 'error', 'uncorrected_ee50', 'corrected_ee50']) 
-    tab.write('simulation2.txt', format='ascii.fixed_width', overwrite=True)
+    tab.write('simulation4.txt', format='ascii.fixed_width', overwrite=True)
 
     # save the final recovered phase
     fits.writeto('final_recovered_phase.fits', mean_phase, overwrite=True)

@@ -24,7 +24,8 @@ from astropy.table import Table
 from scipy.ndimage import zoom
 # import simulation modules
 import sys
-sys.path.append('C:/Users/perfo/Desktop/School/gradschool/699_1/PyWFS_simulation')
+sys.path.append('/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/')
+# sys.path.append('C:/Users/perfo/Desktop/School/gradschool/699_1/PyWFS_simulation')
 from reconstruct import interaction_matrix, zernike_decomposition
 from ModulatedPyWFS import ModulatedWavefrontSensor
 import aberrations
@@ -216,9 +217,9 @@ def compute_ee50(atmosphere, mean_phase):
 # Total number of WFSs
 N_WFSs = 4
 # Fq of WFS (measurements per second)
-Hz = 100
+Hz = 25
 # simulation time step (number of steps per second)
-dt = 1 / 10 * 1/Hz
+dt = 1 / 100 * 1/Hz
 # Size of the pyramid optic
 py_size = 3/206265
 # Pyramid modulation radius in radians

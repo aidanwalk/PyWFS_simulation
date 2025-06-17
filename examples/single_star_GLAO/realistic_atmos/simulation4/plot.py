@@ -6,21 +6,22 @@ import numpy as np
 from matplotlib import animation
 
 import sys
-sys.path.append('C:/Users/perfo/Desktop/School/gradschool/699_1/PyWFS_simulation')
-from simulation1 import peak_location, dt, py_size
+# sys.path.append('C:/Users/perfo/Desktop/School/gradschool/699_1/PyWFS_simulation')
+sys.path.append('/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/')
+from examples.single_star_GLAO.realistic_atmos.simulation4.simulation4 import peak_location, dt, py_size, N_pyramids
 
 
 
 def plot_error(tab, fname='simulation1.png'):
     plt.figure(figsize=(6,3), tight_layout=True)
-    plt.title('Simulation 1')
+    plt.title('Simulation 4')
     plt.plot(tab['num_screens'], tab['error'], c='k', linewidth=1)
     
     # plt.ylim()
     plt.xlabel('Phase screens averaged')
     plt.ylabel('std(recovered - true) / std(true)')
     
-    plt.savefig('simulation1.png', dpi=300)
+    plt.savefig('simulation4.png', dpi=300)
     return
 
 
@@ -30,7 +31,7 @@ def plot_recovery():
     common_phase = fits.getdata('common_phase_zoomed.fits')
     
     plt.figure(figsize=(8,3), tight_layout=True)
-    plt.suptitle('Simulation 2')
+    plt.suptitle('Simulation 4')
     
     plt.subplot(131)
     plt.title('Common Phase')
@@ -61,6 +62,7 @@ def plot_ee50(tab, plate_scale=0.01):
     plt.plot(tab['num_screens']*1e3, tab['uncorrected_ee50']*plate_scale, c='k', linestyle='dotted', linewidth=1, label='Uncorrected')
     plt.plot(tab['num_screens']*1e3, tab['corrected_ee50']*plate_scale, c='k', linewidth=1, label='Corrected')
     
+    plt.ylim(0.2, 0.4)
     plt.xlabel('time [ms]')
     plt.ylabel('EE50 [arcsec]')
     plt.legend()
@@ -90,14 +92,14 @@ def plot_frames(tab):
     average_ground_layer = np.load('average_ground_layer.npy')
     integrated_phase = np.load('integrated_layer.npy')
     integrated_phase_off_axis = np.load('integrated_layer_off_ax.npy')
-    plate_scale = py_size * 206265 / animation_frames.shape[-1]
+    plate_scale = py_size*N_pyramids * 206265 / animation_frames.shape[-1]
 
     corrected = animation_frames[:,2]
     uncorrected = animation_frames[:,1]
     
     plt.clf()
     fig, axs = plt.subplots(2, 3, figsize=(13, 10))
-    plt.suptitle(f'Simulation 1: t = {0.:.4f} seconds', fontsize=16)
+    plt.suptitle(f'Simulation 3: t = {0.:.4f} seconds', fontsize=16)
     
     axs[0][0].set_title('Ground Layer')
     axs[0][1].set_title('Recovered Ground Layer')
@@ -189,7 +191,7 @@ def plot_frames(tab):
             pims[3+j].set_array(im+circles[j]*vmax*0.75)
             # pims[3+j].set_clim(0, vmax)
         
-        plt.suptitle(f'Simulation 1: t = {i*dt:.4f} seconds', fontsize=16)
+        plt.suptitle(f'Simulation 4: t = {i*dt:.4f} seconds', fontsize=16)
         return pims
     
     
@@ -211,15 +213,15 @@ def plot_frames(tab):
 
 
 if __name__ == "__main__":
-    f = 'simulation1.txt'
+    f = 'simulation4.txt'
     format = 'ascii.fixed_width'
     
     tab = Table.read(f, format=format)
     
     
-    plot_error(tab, fname='simulation1.png')
+    plot_error(tab, fname='simulation4.png')
     plot_recovery()
-    plot_ee50(tab, plate_scale=py_size*206265/500)
+    plot_ee50(tab, plate_scale=py_size*N_pyramids*206265/500)
     plot_frames(tab)
     
 

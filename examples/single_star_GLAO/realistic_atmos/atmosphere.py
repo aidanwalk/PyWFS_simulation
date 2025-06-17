@@ -7,7 +7,8 @@ from matplotlib import animation
 from scipy.ndimage import zoom
 # import simulation modules
 import sys
-sys.path.append('C:/Users/perfo/Desktop/School/gradschool/699_1/PyWFS_simulation')
+sys.path.append('/home/arcadia/mysoft/gradschool/699_1/simulation/PyWFS/')
+# sys.path.append('C:/Users/perfo/Desktop/School/gradschool/699_1/PyWFS_simulation')
 from ModulatedPyWFS import ModulatedWavefrontSensor
 import aberrations
 
@@ -64,7 +65,7 @@ def plot_7_layers(images):
 
 def plot_2_layers(images, fname='atmosphere.gif'):
     # plt.figure('layers', figsize=(10, 10), tight_layout=True)
-    fig, axs = plt.subplots(1, 2, figsize=(10, 6), tight_layout=True)
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5), tight_layout=True)
     axs[0].set_title('Ground Layer')
     axs[1].set_title('Free Atmosphere')
     # plt.clf()
@@ -82,7 +83,6 @@ def plot_2_layers(images, fname='atmosphere.gif'):
         ax = axs[i]
         # phase = layer.phase_for(WFS.wavelength).shaped
         im = ax.imshow(layer, cmap='bone', origin='lower', vmin=mins[i], vmax=maxs[i])
-        ax.set_title(f'Layer {i+1}: Height = {layers[i].height} m')
         plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
         ax.axis('off')
         pims.append(im)
