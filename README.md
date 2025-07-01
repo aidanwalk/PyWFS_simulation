@@ -17,7 +17,7 @@ The purpose of this class is to create an interaction matrix, which can then acc
 
 #### Basic Usage
 <code>
-    #
+
     from reconstruct import interaction_matrix
 
     # Number of sub-apertures across one dimension of the pupil
@@ -28,6 +28,7 @@ The purpose of this class is to create an interaction matrix, which can then acc
     # Reconstruct the wavefront phase, 
     # where x_slope and y_slope are the derivative of the wavefront phase.
     phase = imat.slopes2phase(x_slope, y_slope)
+    
 </code>
 
 
@@ -36,7 +37,7 @@ Decomposes a recovered wavefront phase into a zernike basis set.
 
 #### Basic Usage
 <code>
-    #
+
     import hcipy as hp
     from reconstruct import zernike_decomposition
 
@@ -52,6 +53,7 @@ Decomposes a recovered wavefront phase into a zernike basis set.
     coeffs = z_decomp.decompose(wavefront_phase)
     # Re-project the coefficients to Zernike-decomposed wavefront phase
     decomposed_phase = z_decomp(coeffs)
+
 </code>
 
 
