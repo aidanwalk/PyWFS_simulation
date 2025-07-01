@@ -17,16 +17,16 @@ The purpose of this class is to create an interaction matrix, which can then acc
 
 #### Basic Usage
 <code>
-from reconstruct import interaction_matrix
+    from reconstruct import interaction_matrix
 
-# Number of sub-apertures across one dimension of the pupil
-N_subaps = 36
-# Create the interaction matrix (size: N_subaps x N_subaps)
-imat = interaction_matrix(N_subaps)
+    # Number of sub-apertures across one dimension of the pupil
+    N_subaps = 36
+    # Create the interaction matrix (size: N_subaps x N_subaps)
+    imat = interaction_matrix(N_subaps)
 
-# Reconstruct the wavefront phase, 
-# where x_slope and y_slope are the derivative of the wavefront phase.
-phase = imat.slopes2phase(x_slope, y_slope)
+    # Reconstruct the wavefront phase, 
+    # where x_slope and y_slope are the derivative of the wavefront phase.
+    phase = imat.slopes2phase(x_slope, y_slope)
 </code>
 
 
@@ -35,22 +35,21 @@ Decomposes a recovered wavefront phase into a zernike basis set.
 
 #### Basic Usage
 <code>
-import hcipy as hp
-from reconstruct import zernike_decomposition
+    import hcipy as hp
+    from reconstruct import zernike_decomposition
 
-# Number of zernike modes to decompose into
-N_modes = 10
-# Make the grid the wavefront is defined on
-grid = hp.make_pupil_grid(N_subaps, telescope_diameter)
+    # Number of zernike modes to decompose into
+    N_modes = 10
+    # Make the grid the wavefront is defined on
+    grid = hp.make_pupil_grid(N_subaps, telescope_diameter)
 
-# Init the zernike decomposition class
-z_decomp = zernike_decomposition(N_modes, grid, telescope_diameter)
+    # Init the zernike decomposition class
+    z_decomp = zernike_decomposition(N_modes, grid, telescope_diameter)
 
-# Recover the coeffecients for each zernike mode
-coeffs = z_decomp.decompose(wavefront_phase)
-# Re-project the coefficients to Zernike-decomposed wavefront phase
-decomposed_phase = z_decomp(coeffs)
-
+    # Recover the coeffecients for each zernike mode
+    coeffs = z_decomp.decompose(wavefront_phase)
+    # Re-project the coefficients to Zernike-decomposed wavefront phase
+    decomposed_phase = z_decomp(coeffs)
 </code>
 
 
