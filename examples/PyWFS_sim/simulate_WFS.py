@@ -25,7 +25,7 @@ import aberrations
 
 if __name__ == "__main__":
     N_pupil_px = 2**8
-    WFE = np.radians(0.01/3600)
+    WFE = np.radians(0.1/3600)
     
     # Init the wavefront sensor
     WFS = WavefrontSensor()
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     incoming_wavefront = WFS.flat_wavefront()
     # Inject an aberration in to the incoming wavefront
     Z = aberrations.Zernike(WFS.input_pupil_grid, WFS.telescope_diameter)
-    aberration = Z.from_name('spherical', WFE=WFE, wavelength=WFS.wavelength)
+    aberration = Z.from_name('defocus', WFE=WFE, wavelength=WFS.wavelength)
     incoming_wavefront = aberrations.aberrate(incoming_wavefront, aberration)
     
     
