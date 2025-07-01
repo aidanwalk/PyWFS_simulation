@@ -17,6 +17,7 @@ The purpose of this class is to create an interaction matrix, which can then acc
 
 #### Basic Usage
 <code>
+    #
     from reconstruct import interaction_matrix
 
     # Number of sub-apertures across one dimension of the pupil
@@ -35,6 +36,7 @@ Decomposes a recovered wavefront phase into a zernike basis set.
 
 #### Basic Usage
 <code>
+    #
     import hcipy as hp
     from reconstruct import zernike_decomposition
 
