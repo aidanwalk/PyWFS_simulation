@@ -114,6 +114,10 @@ class Zernike:
     def phase_delay(self, n, m, WFE, wavelength):
         """
         Calculates the phase delay of a Zernike mode.
+        For example, to generate a 1 arcsecond tilt aberration:
+        
+        Z = Zernike(input_pupil_grid, D)
+        phase = from_name('tilt x', WFE= (1/206265 * D/2), wavelength=wvln)
 
         Parameters
         ----------

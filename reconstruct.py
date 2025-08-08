@@ -163,7 +163,33 @@ class interaction_matrix(np.ndarray):
         return A_y
     
 
-    def slope2phase(self, sx, sy, telescope_dia=2.2, invert=True):
+    def slope2phase(self, sx, sy, invert=False):
+        """
+        Converts wavefront slopes to phase values using the interaction matrix.
+        
+        This method takes the wavefront slopes in the x and y directions (sx and sy)
+        and converts them to phase values using the interaction matrix. The 
+        resulting phase values are reshaped to match the original grid shape.
+
+        Parameters
+        ----------
+        sx : ndarray
+            Wavefront slope in the x direction. ** Remember to multiply by 'h' **
+            The diameter of the sub-aperture in meters. h = D / N
+        sy : ndarray
+            Wavefront slope in the y direction.
+        invert : bool, optional
+            If True, invert the phase values (mirror along both axes), by default False
+
+        Returns
+        -------
+        ndarray
+            The reconstructed wavefront phase values, reshaped to match the 
+            original grid shape. The phase values are in radians.
+            
+        """
+        # ##### REMEMBER TO MULTIPLY SLOPES BY 'h'; THE DIAMETER OF THE SUB-APERTURE
+        # ##### IN METERS. h = D / N
         # Construct the vector of slope values in the form:
         # [sx1, sx2, sx3, ..., sxf, sy1, sy2, sy3, ..., syf]
         s = np.hstack((sx.flatten(), sy.flatten()))
@@ -179,10 +205,11 @@ class interaction_matrix(np.ndarray):
         # I am not sure why this happens... book keeping error in wavefront 
         # slopes calculation? 
         # SOLVED: The pyramid optic causes a flip in both the x and y axes. 
-        # This causes the recovered phase to be upside down and mirrored.
-        # (eg. if star light falls on the bottom right facet of the pyramid, 
-        # the light will be reflected to the top left quadrant of the detector)
-        # To fix this, we just flip the recovered phase.
+        # This causes the extracted quadrants in the WFS.split_quadrants()
+        # method to be upside down and backwards. We mirror the WFS signal
+        # along both axes to correct for this.
+        # See the WFS.split_quadrants() method for more details.
+        # This feature is no longer needed. 
         if invert:
             phases = phases[::-1, ::-1]
 

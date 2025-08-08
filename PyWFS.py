@@ -217,6 +217,26 @@ class WavefrontSensor:
             signal = self.rotate(signal, crop=True)
         return signal
     
+    
+    def pupil_to_focal_intensity(self, wavefront):
+        """
+        Propagates the wavefront from the pupil to the focal plane and returns 
+        the intensity image.
+
+        Parameters
+        ----------
+        wavefront : hcipy.optics.wavefront.Wavefront
+            HCIPy wavefront object representing the wavefront at the entrance
+            of the telescope (i.e. in a pupil plane).
+
+        Returns
+        -------
+        focal_intensity : ndarray
+            Intensity image of the wavefront in the focal plane.
+
+        """
+        return self.pupil2image(wavefront).intensity.shaped
+    
 
     def split_quadrants(self, WFS_signal):
         """
@@ -235,11 +255,20 @@ class WavefrontSensor:
             Wavefront sensor pupil images ordered by quadrant.
 
         """
+        # WFS signal is upside down and flipped left to right. This is caused 
+        # by the pyramid optic. If a star lands on the top-right quadrant of
+        # the pyramid, the light will be reflected to the bottom-left quadrant 
+        # of the WFS image. We reverse the WFS signal here so that we extract 
+        # the correct quadrants consistent with the focal plane coordinate 
+        # system.
+        WFS_signal = WFS_signal[::-1, ::-1] 
+
+        # Extract the individual quadrants from the WFS signal images.
         # ij indexing, 0,0 is bottom left of array
-        Q3 = WFS_signal[:self.N_elements, :self.N_elements]
-        Q4 = WFS_signal[:self.N_elements, 1+self.N_elements:]
         Q1 = WFS_signal[1+self.N_elements:, 1+self.N_elements:]
         Q2 = WFS_signal[1+self.N_elements:, :self.N_elements]
+        Q3 = WFS_signal[:self.N_elements, :self.N_elements]
+        Q4 = WFS_signal[:self.N_elements, 1+self.N_elements:]
         
         Qs = [Q1, Q2, Q3, Q4]
         
@@ -295,7 +324,7 @@ class WavefrontSensor:
         
     
     
-    def measure_slopes(self, WFS_signal):
+    def measure_slopes(self, WFS_signal, gain=1.0):
         """
         Measures the wavefront slopes in <x> and <y> based on the input 
         pupil images (i.e. quadrants). 
@@ -305,7 +334,10 @@ class WavefrontSensor:
         WFS_signal : ndarray
             The intensity image of the wavefront sensor. (the array of four
             pupil images).
-
+        gain : float, optional
+            The gain to apply to the slopes. This is the telescope focal length
+            divided by the physical size of the vibration amplitude. The default
+            is 1.0. (see Ragazzoni 1996 for details)
         Returns
         -------
         sx : ndarray
@@ -323,12 +355,15 @@ class WavefrontSensor:
         # images
         sx = (a-b-c+d) / I
         sy = (a+b-c-d) / I
-        
+        # Scale the slopes from radians / m to radians / subaperture
         sx *= self.telescope_diameter / self.N_elements
         sy *= self.telescope_diameter / self.N_elements
+
+        # Apply the gain to the slopes
+        sx *= gain
+        sy *= gain
         
         return sx, sy
-    
     
 
     def light_progression(self, wavefront):
