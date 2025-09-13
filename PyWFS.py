@@ -356,8 +356,8 @@ class WavefrontSensor:
         sx = (a-b-c+d) / I
         sy = (a+b-c-d) / I
         # Scale the slopes from radians / m to radians / subaperture
-        sx *= self.telescope_diameter / self.N_elements
-        sy *= self.telescope_diameter / self.N_elements
+        sx *= 1 / self.N_elements
+        sy *= 1 / self.N_elements
 
         # Apply the gain to the slopes
         sx *= gain
